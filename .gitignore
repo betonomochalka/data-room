@@ -20,10 +20,10 @@ frontend/.env
 frontend/.env.*
 
 # KEEP EXAMPLE FILES (safe to commit)
-!*.env.example
-!env.example
-!backend/env.example
-!frontend/.env.example
+*.env.example
+env.example
+backend/env.example
+frontend/.env.example
 
 # ============================================
 # DEPENDENCIES
@@ -203,7 +203,6 @@ dist/
 
 # Gatsby
 .cache/
-public/
 
 # VuePress
 .vuepress/dist/

@@ -17,7 +17,8 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 const allowedOrigins = [
-  'https://data-room-196e.vercel.app', 'http://localhost:3000'
+  'https://data-room-196e.vercel.app', 
+  'http://localhost:3000'
 ];
 // Rate limiting
 const limiter = rateLimit({

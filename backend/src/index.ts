@@ -67,8 +67,19 @@ app.use('/api/files', fileRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
+  console.log('[HEALTH] Health check requested');
   res.status(200).json({ 
     status: 'OK', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Root health check
+app.get('/', (req, res) => {
+  console.log('[ROOT] Root endpoint hit');
+  res.status(200).json({ 
+    message: 'Backend server is running!',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
   });
@@ -119,6 +130,9 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🔗 Root endpoint: http://localhost:${PORT}/`);
+  console.log(`🔗 CORS test: http://localhost:${PORT}/api/cors-test`);
+  console.log(`🔗 Auth endpoint: http://localhost:${PORT}/api/auth/google`);
 });
 
 export default app;

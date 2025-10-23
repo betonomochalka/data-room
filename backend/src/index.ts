@@ -29,8 +29,26 @@ const limiter = rateLimit({
 
 // Middleware
 app.use(helmet());
+// CORS configuration with debugging
 app.use(cors({
-  origin: allowedOrigins,
+  origin: function (origin, callback) {
+    console.log(`[CORS] Request from origin: ${origin}`);
+    console.log(`[CORS] Allowed origins: ${JSON.stringify(allowedOrigins)}`);
+    
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) {
+      console.log(`[CORS] No origin provided, allowing request`);
+      return callback(null, true);
+    }
+    
+    if (allowedOrigins.includes(origin)) {
+      console.log(`[CORS] Origin ${origin} is allowed`);
+      return callback(null, true);
+    } else {
+      console.log(`[CORS] Origin ${origin} not allowed`);
+      return callback(new Error(`CORS policy does not allow access from origin ${origin}`), false);
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
@@ -58,11 +76,23 @@ app.get('/api/health', (req, res) => {
 
 // CORS test endpoint
 app.get('/api/cors-test', (req, res) => {
+  console.log(`[CORS-TEST] Request from origin: ${req.headers.origin}`);
   res.status(200).json({ 
     message: 'CORS is working!',
     origin: req.headers.origin,
     timestamp: new Date().toISOString()
   });
+});
+
+// Handle preflight requests explicitly
+app.options('/api/*', (req, res) => {
+  console.log(`[CORS] Handling preflight request for ${req.originalUrl}`);
+  console.log(`[CORS] Origin: ${req.headers.origin}`);
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.status(200).end();
 });
 
 // Error handling

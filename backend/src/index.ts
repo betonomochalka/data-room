@@ -46,7 +46,7 @@ app.use((req, res, next) => {
   const origin = req.headers.origin;
   console.log(`[CORS-FALLBACK] Request from origin: ${origin}`);
   
-  if (allowedOrigins.includes(origin)) {
+  if (origin && allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
     console.log(`[CORS-FALLBACK] Origin ${origin} allowed`);
   } else if (!origin) {
@@ -66,7 +66,7 @@ app.use((req, res, next) => {
     return res.sendStatus(200);
   }
   
-  next();
+  return next();
 });
 
 // CORS configuration with debugging
@@ -149,7 +149,7 @@ app.get('/api/cors-debug', (req, res) => {
     message: 'CORS Debug Info',
     requestOrigin: req.headers.origin,
     allowedOrigins: allowedOrigins,
-    isOriginAllowed: allowedOrigins.includes(req.headers.origin),
+    isOriginAllowed: req.headers.origin ? allowedOrigins.includes(req.headers.origin) : false,
     environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString()
   });

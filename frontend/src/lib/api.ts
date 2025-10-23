@@ -24,16 +24,43 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Handle response errors
+// Handle response errors with comprehensive logging
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('✅ [API] Response received:', {
+      url: response.config.url,
+      status: response.status,
+      data: response.data
+    });
+    return response;
+  },
   (error) => {
+    console.error('❌ [API] Request failed:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      code: error.code
+    });
+
+    // Handle different types of errors
     if (error.response?.status === 401) {
-      // Clear token and redirect to login
+      console.log('🔐 [API] Unauthorized - clearing tokens and redirecting to login');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
+    } else if (error.response?.status === 404) {
+      console.error('🔍 [API] Endpoint not found - check if backend is deployed correctly');
+    } else if (error.response?.status === 403) {
+      console.error('🚫 [API] Forbidden - check CORS configuration');
+    } else if (error.code === 'ERR_NETWORK') {
+      console.error('🌐 [API] Network error - check if backend is accessible');
+    } else if (error.code === 'ERR_CANCELED') {
+      console.error('⏹️ [API] Request was canceled');
     }
+
     return Promise.reject(error);
   }
 );

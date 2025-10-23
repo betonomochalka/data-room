@@ -84,7 +84,30 @@ export const AuthCallback: React.FC = () => {
           fullError: error,
         });
         
-        const errorMessage = error.response?.data?.error || error.message || 'Failed to complete authentication';
+        // Enhanced error handling with specific error messages
+        let errorMessage = 'Failed to complete authentication';
+        
+        if (error.response?.status === 404) {
+          errorMessage = 'Backend service not found. Please try again later.';
+        } else if (error.response?.status === 500) {
+          errorMessage = 'Server error. Please try again later.';
+        } else if (error.response?.status === 403) {
+          errorMessage = 'Access denied. Please check your permissions.';
+        } else if (error.code === 'ERR_NETWORK') {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else if (error.response?.data?.error) {
+          errorMessage = error.response.data.error;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        console.error('🔍 [AuthCallback] Error details:', {
+          type: error.response?.status ? 'HTTP_ERROR' : 'NETWORK_ERROR',
+          status: error.response?.status,
+          message: errorMessage,
+          originalError: error.message
+        });
+        
         setError(errorMessage);
         setTimeout(() => navigate('/login'), 3000);
       }

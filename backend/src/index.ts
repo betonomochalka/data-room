@@ -84,8 +84,17 @@ app.get('/api/cors-test', (req, res) => {
   });
 });
 
-// Handle preflight requests explicitly
-app.options('/api/*', (req, res) => {
+// Simple test endpoint
+app.get('/api/test', (req, res) => {
+  console.log(`[TEST] Simple test endpoint hit`);
+  res.status(200).json({ 
+    message: 'Backend is working!',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Handle preflight requests explicitly for all routes
+app.options('*', (req, res) => {
   console.log(`[CORS] Handling preflight request for ${req.originalUrl}`);
   console.log(`[CORS] Origin: ${req.headers.origin}`);
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');

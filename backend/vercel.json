@@ -1,5 +1,4 @@
 {
-    "installCommand": "npm install --legacy-peer-deps",
     "version": 2,
     "builds": [
         {
@@ -11,6 +10,10 @@
         {
             "src": "/api/(.*)",
             "dest": "/api/$1"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "/api/index.ts"
         }
     ]
 }

@@ -16,10 +16,21 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const allowedOrigins = [
-  'https://data-room-196e.vercel.app', 
-  'http://localhost:3000'
-];
+// Environment-based CORS configuration
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? [
+      'https://data-room-196e.vercel.app',
+      'https://data-room-seven.vercel.app'
+    ]
+  : [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://data-room-196e.vercel.app',
+      'https://data-room-seven.vercel.app'
+    ];
+
+console.log('🔧 [CORS] Current allowed origins:', allowedOrigins);
+console.log('🔧 [CORS] Environment:', process.env.NODE_ENV || 'development');
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -29,6 +40,35 @@ const limiter = rateLimit({
 
 // Middleware
 app.use(helmet());
+
+// Manual CORS headers as fallback
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  console.log(`[CORS-FALLBACK] Request from origin: ${origin}`);
+  
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    console.log(`[CORS-FALLBACK] Origin ${origin} allowed`);
+  } else if (!origin) {
+    // Allow requests with no origin (like mobile apps or curl)
+    res.header('Access-Control-Allow-Origin', '*');
+    console.log(`[CORS-FALLBACK] No origin provided, allowing with *`);
+  } else {
+    console.log(`[CORS-FALLBACK] Origin ${origin} not in allowed list`);
+  }
+  
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  
+  if (req.method === 'OPTIONS') {
+    console.log(`[CORS-FALLBACK] Handling OPTIONS request for ${req.originalUrl}`);
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
+
 // CORS configuration with debugging
 app.use(cors({
   origin: function (origin, callback) {
@@ -88,9 +128,29 @@ app.get('/', (req, res) => {
 // CORS test endpoint
 app.get('/api/cors-test', (req, res) => {
   console.log(`[CORS-TEST] Request from origin: ${req.headers.origin}`);
+  console.log(`[CORS-TEST] Request headers:`, req.headers);
   res.status(200).json({ 
     message: 'CORS is working!',
     origin: req.headers.origin,
+    allowedOrigins: allowedOrigins,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// CORS debug endpoint
+app.get('/api/cors-debug', (req, res) => {
+  console.log(`[CORS-DEBUG] Full request details:`, {
+    origin: req.headers.origin,
+    method: req.method,
+    url: req.url,
+    headers: req.headers
+  });
+  res.status(200).json({ 
+    message: 'CORS Debug Info',
+    requestOrigin: req.headers.origin,
+    allowedOrigins: allowedOrigins,
+    isOriginAllowed: allowedOrigins.includes(req.headers.origin),
+    environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString()
   });
 });

@@ -24,26 +24,28 @@ model User {
 model DataRoom {
   id        String   @id @default(uuid())
   name      String
-  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  ownerId   String
+  description String?
+  user_id   String   @map("user_id")
   folders   Folder[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  files     File[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("data_rooms")
 }
 
 model Folder {
-  id         String   @id @default(uuid())
-  name       String
-  parent     Folder?  @relation("FolderChildren", fields: [parentId], references: [id], onDelete: Cascade)
-  parentId   String?
-  children   Folder[] @relation("FolderChildren")
-  files      File[]
-  dataRoom   DataRoom @relation(fields: [dataRoomId], references: [id], onDelete: Cascade)
-  dataRoomId String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id             String   @id @default(uuid())
+  name           String
+  parent         Folder?  @relation("FolderChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId       String?  @map("parent_folder_id")
+  children       Folder[] @relation("FolderChildren")
+  files          File[]
+  dataRoom       DataRoom @relation(fields: [dataRoomId], references: [id], onDelete: Cascade)
+  dataRoomId     String   @map("data_room_id")
+  user_id        String   @map("user_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   @@map("folders")
 }
@@ -51,13 +53,16 @@ model Folder {
 model File {
   id        String   @id @default(uuid())
   name      String
-  fileType  String
-  size      Int?
-  folder    Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
-  folderId  String
-  blobUrl   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  fileType  String   @map("mime_type")
+  size      Int?     @map("file_size")
+  filePath  String?  @map("file_path")
+  folder    Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  folderId  String?  @map("folder_id")
+  dataRoom  DataRoom @relation(fields: [dataRoomId], references: [id], onDelete: Cascade)
+  dataRoomId String  @map("data_room_id")
+  user_id   String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("files")
 }

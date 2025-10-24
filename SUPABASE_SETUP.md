@@ -32,76 +32,43 @@ REACT_APP_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXB
 
 ### 2. Supabase Database Setup
 
-#### Create the required database tables:
+#### Option A: Use Prisma (Recommended)
 
-Go to your Supabase Dashboard → **SQL Editor** and run this SQL:
+Since you already have Prisma configured, let's use it to manage the database schema:
 
-```sql
--- Create data_rooms table (if it doesn't exist)
-CREATE TABLE IF NOT EXISTS data_rooms (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+1. **Update your Prisma schema** (already done in the codebase)
+2. **Set up the database connection**:
+   - Go to your Supabase Dashboard → **Settings** → **Database**
+   - Copy the **Connection string** (URI)
+   - Update your backend environment variable `DATABASE_URL` in Vercel
 
--- Create folders table (if it doesn't exist)
-CREATE TABLE IF NOT EXISTS folders (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  data_room_id UUID REFERENCES data_rooms(id) ON DELETE CASCADE,
-  parent_folder_id UUID REFERENCES folders(id) ON DELETE CASCADE,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+3. **Run Prisma migrations**:
+   ```bash
+   cd backend
+   npx prisma migrate dev --name supabase-integration
+   npx prisma generate
+   ```
 
--- Create files table (if it doesn't exist)
-CREATE TABLE IF NOT EXISTS files (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  data_room_id UUID REFERENCES data_rooms(id) ON DELETE CASCADE,
-  folder_id UUID REFERENCES folders(id) ON DELETE SET NULL,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  file_size BIGINT,
-  mime_type TEXT,
-  file_path TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+4. **Enable Row Level Security in Supabase**:
+   Go to your Supabase Dashboard → **SQL Editor** and run:
+   ```sql
+   -- Enable Row Level Security on all tables
+   ALTER TABLE data_rooms ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE folders ENABLE ROW LEVEL SECURITY;
+   ALTER TABLE files ENABLE ROW LEVEL SECURITY;
 
--- Enable Row Level Security on all tables
-ALTER TABLE data_rooms ENABLE ROW LEVEL SECURITY;
-ALTER TABLE folders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE files ENABLE ROW LEVEL SECURITY;
+   -- Create policies for data_rooms
+   CREATE POLICY "Users can only see their own data rooms" ON data_rooms
+     FOR ALL USING (auth.uid()::text = user_id);
 
--- Drop existing policies if they exist (to avoid conflicts)
-DROP POLICY IF EXISTS "Users can only see their own data rooms" ON data_rooms;
-DROP POLICY IF EXISTS "Users can only see folders in their data rooms" ON folders;
-DROP POLICY IF EXISTS "Users can only see files in their data rooms" ON files;
+   -- Create policies for folders
+   CREATE POLICY "Users can only see folders in their data rooms" ON folders
+     FOR ALL USING (auth.uid()::text = user_id);
 
--- Create policies for data_rooms
-CREATE POLICY "Users can only see their own data rooms" ON data_rooms
-  FOR ALL USING (auth.uid() = user_id);
-
--- Create policies for folders
-CREATE POLICY "Users can only see folders in their data rooms" ON folders
-  FOR ALL USING (auth.uid() = user_id);
-
--- Create policies for files
-CREATE POLICY "Users can only see files in their data rooms" ON files
-  FOR ALL USING (auth.uid() = user_id);
-
--- Create indexes for better performance (if they don't exist)
-CREATE INDEX IF NOT EXISTS idx_data_rooms_user_id ON data_rooms(user_id);
-CREATE INDEX IF NOT EXISTS idx_folders_data_room_id ON folders(data_room_id);
-CREATE INDEX IF NOT EXISTS idx_folders_user_id ON folders(user_id);
-CREATE INDEX IF NOT EXISTS idx_files_data_room_id ON files(data_room_id);
-CREATE INDEX IF NOT EXISTS idx_files_folder_id ON files(folder_id);
-CREATE INDEX IF NOT EXISTS idx_files_user_id ON files(user_id);
-```
+   -- Create policies for files
+   CREATE POLICY "Users can only see files in their data rooms" ON files
+     FOR ALL USING (auth.uid()::text = user_id);
+   ```
 
 ### 3. Supabase Google OAuth Setup
 

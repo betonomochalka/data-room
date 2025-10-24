@@ -86,6 +86,8 @@ export const Login: React.FC = () => {
             setLoading(false);
           }
         },
+        auto_select: false, // Don't auto-select account
+        cancel_on_tap_outside: false, // Don't cancel when clicking outside
       });
 
       // Try One Tap first, then fallback to prompt
@@ -175,17 +177,35 @@ export const Login: React.FC = () => {
                   variant="outline"
                   className="w-full mt-2"
                   onClick={() => {
+                    console.log('🔧 Force Google One Tap display');
+                    if (window.google?.accounts?.id) {
+                      // Force display One Tap even if user opted out
+                      window.google.accounts.id.prompt();
+                      console.log('✅ Forced One Tap display');
+                    }
+                  }}
+                >
+                  🔧 Force Google One Tap
+                </Button>
+
+                <Button 
+                  type="button"
+                  variant="outline"
+                  className="w-full mt-2"
+                  onClick={() => {
                     console.log('🔧 Manual popup test');
                     const popup = window.open(
                       'https://accounts.google.com/oauth/authorize?client_id=' + 
                       process.env.REACT_APP_GOOGLE_CLIENT_ID + 
-                      '&redirect_uri=' + encodeURIComponent(window.location.origin) + 
-                      '&response_type=code&scope=openid%20email%20profile',
+                      '&redirect_uri=' + encodeURIComponent(window.location.origin + '/auth/callback') + 
+                      '&response_type=code&scope=openid%20email%20profile&access_type=offline',
                       'google-login',
                       'width=500,height=600,scrollbars=yes,resizable=yes'
                     );
                     if (!popup) {
                       alert('Popup blocked! Please allow popups for this site.');
+                    } else {
+                      console.log('✅ Manual popup opened successfully');
                     }
                   }}
                 >

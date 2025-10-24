@@ -132,6 +132,21 @@ export const Login: React.FC = () => {
                   🔧 Test OAuth URL
                 </Button>
 
+                <Button 
+                  type="button"
+                  variant="outline"
+                  className="w-full mt-2"
+                  onClick={() => {
+                    // Test with minimal parameters
+                    const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+                    const minimalUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(window.location.origin + '/auth/callback')}&response_type=code&scope=openid%20email%20profile`;
+                    console.log('🔧 Minimal OAuth URL:', minimalUrl);
+                    window.open(minimalUrl, '_blank');
+                  }}
+                >
+                  🔧 Test Minimal OAuth
+                </Button>
+
 
             <div className="text-xs text-center text-muted-foreground">
               <p>Sign in with your Google account to access the data room</p>

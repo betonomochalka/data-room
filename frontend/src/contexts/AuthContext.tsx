@@ -68,13 +68,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const signInWithGoogle = async () => {
     try {
       setLoading(true);
-      // Use API URL base for redirect, fallback to current origin
-      const apiUrl = process.env.REACT_APP_API_URL;
-      const redirectUrl = apiUrl ? apiUrl.replace('/api', '') : window.location.origin;
+      // Redirect to the correct frontend domain
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: redirectUrl,
+          redirectTo: 'https://data-room-196e.vercel.app',
         },
       });
       if (error) throw error;

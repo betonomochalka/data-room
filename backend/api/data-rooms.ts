@@ -8,14 +8,21 @@ const authenticateToken = (req: VercelRequest): string | null => {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1];
 
+  console.log('🔍 Auth header:', authHeader);
+  console.log('🔍 Token:', token ? token.substring(0, 20) + '...' : 'null');
+  console.log('🔍 JWT_SECRET exists:', !!process.env.JWT_SECRET);
+
   if (!token) {
+    console.log('❌ No token found');
     return null;
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+    console.log('✅ Token valid, userId:', decoded.userId);
     return decoded.userId;
   } catch (error) {
+    console.log('❌ Token validation failed:', error);
     return null;
   }
 };

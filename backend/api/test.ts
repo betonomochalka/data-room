@@ -1,13 +1,20 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { setCorsHeaders } from '../../src/config/cors';
+
+// Inline CORS headers function
+const setCorsHeaders = (res: VercelResponse) => {
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+};
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
   console.log('[TEST] Test endpoint called');
   console.log('[TEST] Request method:', req.method);
   console.log('[TEST] Request URL:', req.url);
   
-  // Set CORS headers from centralized config
-  setCorsHeaders(res, req.headers.origin as string);
+  // Set CORS headers
+  setCorsHeaders(res);
   
   if (req.method === 'OPTIONS') {
     return res.status(200).end();

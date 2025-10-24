@@ -1,15 +1,30 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { PrismaClient } from '@prisma/client';
-import { generateToken } from '../../src/middleware/auth';
-import { setCorsHeaders } from '../../src/config/cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+
+// Inline CORS headers function
+const setCorsHeaders = (res: VercelResponse) => {
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+};
+
+// Inline token generation function
+const generateToken = (userId: string): string => {
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    throw new Error('JWT secret not configured');
+  }
+  return jwt.sign({ userId }, jwtSecret, { expiresIn: '7d' });
+};
 
 const prisma = new PrismaClient();
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Set CORS headers from centralized config
-  setCorsHeaders(res, req.headers.origin as string);
+  // Set CORS headers
+  setCorsHeaders(res);
 
   // Handle preflight requests
   if (req.method === 'OPTIONS') {

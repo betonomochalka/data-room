@@ -34,6 +34,7 @@ export const authenticateToken = async (
         name: true,
         createdAt: true,
         updatedAt: true,
+        // Note: password is intentionally excluded from the user object
       },
     });
 

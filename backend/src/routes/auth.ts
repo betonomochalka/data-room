@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { generateToken } from '../middleware/auth';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -63,8 +64,7 @@ router.get('/me', asyncHandler(async (req: Request, res: Response) => {
   }
 
   // Verify token and get user
-  const jwt = require('jsonwebtoken');
-  const decoded = jwt.verify(token, process.env.JWT_SECRET) as { userId: string };
+  const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
   
   const user = await prisma.user.findUnique({
     where: { id: decoded.userId },

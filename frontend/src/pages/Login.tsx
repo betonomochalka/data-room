@@ -36,7 +36,7 @@ export const Login: React.FC = () => {
         prompt: 'select_account'
       });
 
-      const authUrl = `https://accounts.google.com/oauth/authorize?${params.toString()}`;
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 
       console.log('🔗 Redirecting to:', authUrl);
       console.log('🔗 URL length:', authUrl.length);
@@ -123,7 +123,7 @@ export const Login: React.FC = () => {
                       access_type: 'offline',
                       prompt: 'select_account'
                     });
-                    const authUrl = `https://accounts.google.com/oauth/authorize?${params.toString()}`;
+                    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
                     console.log('🔧 Test OAuth URL:', authUrl);
                     console.log('🔧 Opening in new tab for testing...');
                     window.open(authUrl, '_blank');

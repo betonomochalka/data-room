@@ -38,41 +38,37 @@ export const FileTree: React.FC<FileTreeProps> = ({
   };
 
   const buildTree = (): TreeNode[] => {
-    // Create a map of folders for easy lookup
-    const folderMap = new Map(folders.map(folder => [folder.id, folder]));
-    
-    // Build tree structure
-    const rootNodes: TreeNode[] = [];
-    
-    // Add root folders (folders with no parent)
-    folders.forEach(folder => {
-      if (!folder.parentId) {
-        rootNodes.push({
-          id: folder.id,
-          name: folder.name,
-          type: 'folder',
-          children: []
+    // Build tree structure recursively
+    const buildNode = (folder: any): TreeNode => {
+      const node: TreeNode = {
+        id: folder.id,
+        name: folder.name,
+        type: 'folder',
+        children: []
+      };
+      
+      // Add subfolders
+      const subfolders = folders.filter(f => f.parentId === folder.id);
+      subfolders.forEach(subfolder => {
+        node.children!.push(buildNode(subfolder));
+      });
+      
+      // Add files in this folder
+      const folderFiles = files.filter(file => file.folderId === folder.id);
+      folderFiles.forEach(file => {
+        node.children!.push({
+          id: file.id,
+          name: file.name,
+          type: 'file'
         });
-      }
-    });
+      });
+      
+      return node;
+    };
     
-    // Add files to their respective folders
-    files.forEach(file => {
-      const folder = folderMap.get(file.folderId);
-      if (folder && !folder.parentId) {
-        const rootFolder = rootNodes.find(node => node.id === folder.id);
-        if (rootFolder) {
-          rootFolder.children = rootFolder.children || [];
-          rootFolder.children.push({
-            id: file.id,
-            name: file.name,
-            type: 'file'
-          });
-        }
-      }
-    });
-    
-    return rootNodes;
+    // Start with root folders (folders with no parent)
+    const rootFolders = folders.filter(folder => !folder.parentId);
+    return rootFolders.map(folder => buildNode(folder));
   };
 
   const renderTreeNode = (node: TreeNode, level: number = 0) => {

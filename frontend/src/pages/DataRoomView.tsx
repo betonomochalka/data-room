@@ -23,58 +23,85 @@ export const DataRoomView: React.FC = () => {
   const [uploadFileName, setUploadFileName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Temporary state for mock data
-  const [tempFolders, setTempFolders] = useState<FolderType[]>([
-    {
-      id: 'temp-folder-1',
-      name: 'Documents',
-      dataRoomId: id || 'temp-room',
-      parentId: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      _count: { files: 2, children: 1 }
-    },
-    {
-      id: 'temp-folder-2',
-      name: 'Images',
-      dataRoomId: id || 'temp-room',
-      parentId: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      _count: { files: 0, children: 0 }
-    },
-    {
-      id: 'temp-folder-3',
-      name: 'Subfolder',
-      dataRoomId: id || 'temp-room',
-      parentId: 'temp-folder-1',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      _count: { files: 0, children: 0 }
+  // Initialize state with localStorage data or defaults
+  const getInitialFolders = (): FolderType[] => {
+    const saved = localStorage.getItem(`dataRoom-${id}-folders`);
+    if (saved) {
+      return JSON.parse(saved);
     }
-  ]);
-  const [tempFiles, setTempFiles] = useState<FileType[]>([
-    {
-      id: 'temp-file-1',
-      name: 'Sample Document.pdf',
-      fileType: 'application/pdf',
-      size: 1024000,
-      blobUrl: '#',
-      folderId: 'temp-folder-1',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: 'temp-file-2',
-      name: 'Another File.pdf',
-      fileType: 'application/pdf',
-      size: 2048000,
-      blobUrl: '#',
-      folderId: 'temp-folder-1',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+    return [
+      {
+        id: 'temp-folder-1',
+        name: 'Documents',
+        dataRoomId: id || 'temp-room',
+        parentId: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        _count: { files: 2, children: 1 }
+      },
+      {
+        id: 'temp-folder-2',
+        name: 'Images',
+        dataRoomId: id || 'temp-room',
+        parentId: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        _count: { files: 0, children: 0 }
+      },
+      {
+        id: 'temp-folder-3',
+        name: 'Subfolder',
+        dataRoomId: id || 'temp-room',
+        parentId: 'temp-folder-1',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        _count: { files: 0, children: 0 }
+      }
+    ];
+  };
+
+  const getInitialFiles = (): FileType[] => {
+    const saved = localStorage.getItem(`dataRoom-${id}-files`);
+    if (saved) {
+      return JSON.parse(saved);
     }
-  ]);
+    return [
+      {
+        id: 'temp-file-1',
+        name: 'Sample Document.pdf',
+        fileType: 'application/pdf',
+        size: 1024000,
+        blobUrl: 'data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwo...', // Sample PDF data
+        folderId: 'temp-folder-1',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: 'temp-file-2',
+        name: 'Another File.pdf',
+        fileType: 'application/pdf',
+        size: 2048000,
+        blobUrl: 'data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwo...', // Sample PDF data
+        folderId: 'temp-folder-1',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    ];
+  };
+
+  const [tempFolders, setTempFolders] = useState<FolderType[]>(getInitialFolders);
+  const [tempFiles, setTempFiles] = useState<FileType[]>(getInitialFiles);
+
+  // Save to localStorage whenever state changes
+  const saveFolders = (folders: FolderType[]) => {
+    localStorage.setItem(`dataRoom-${id}-folders`, JSON.stringify(folders));
+    setTempFolders(folders);
+  };
+
+  const saveFiles = (files: FileType[]) => {
+    localStorage.setItem(`dataRoom-${id}-files`, JSON.stringify(files));
+    setTempFiles(files);
+  };
 
   // Temporary bypass for data room fetching
   const { data: dataRoomData, isLoading: isLoadingDataRoom } = useQuery<ApiResponse<DataRoom>>({
@@ -125,7 +152,8 @@ export const DataRoomView: React.FC = () => {
         updatedAt: new Date().toISOString(),
         _count: { files: 0, children: 0 }
       };
-      setTempFolders(prev => [...prev, newFolder]);
+      const updatedFolders = [...tempFolders, newFolder];
+      saveFolders(updatedFolders);
       return newFolder;
     },
     onSuccess: () => {
@@ -142,7 +170,8 @@ export const DataRoomView: React.FC = () => {
   const deleteFolderMutation = useMutation({
     mutationFn: async (folderIdToDelete: string) => {
       console.log('Temporary bypass - deleting mock folder');
-      setTempFolders(prev => prev.filter(folder => folder.id !== folderIdToDelete));
+      const updatedFolders = tempFolders.filter(folder => folder.id !== folderIdToDelete);
+      saveFolders(updatedFolders);
       return { id: folderIdToDelete };
     },
     onSuccess: () => {
@@ -153,7 +182,8 @@ export const DataRoomView: React.FC = () => {
   const deleteFileMutation = useMutation({
     mutationFn: async (fileId: string) => {
       console.log('Temporary bypass - deleting mock file');
-      setTempFiles(prev => prev.filter(file => file.id !== fileId));
+      const updatedFiles = tempFiles.filter(file => file.id !== fileId);
+      saveFiles(updatedFiles);
       return { id: fileId };
     },
     onSuccess: () => {
@@ -164,9 +194,10 @@ export const DataRoomView: React.FC = () => {
   const renameFolderMutation = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
       console.log('Temporary bypass - renaming mock folder');
-      setTempFolders(prev => prev.map(folder => 
+      const updatedFolders = tempFolders.map(folder => 
         folder.id === id ? { ...folder, name, updatedAt: new Date().toISOString() } : folder
-      ));
+      );
+      saveFolders(updatedFolders);
       return { id, name };
     },
     onSuccess: () => {
@@ -180,9 +211,10 @@ export const DataRoomView: React.FC = () => {
   const renameFileMutation = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
       console.log('Temporary bypass - renaming mock file');
-      setTempFiles(prev => prev.map(file => 
+      const updatedFiles = tempFiles.map(file => 
         file.id === id ? { ...file, name, updatedAt: new Date().toISOString() } : file
-      ));
+      );
+      saveFiles(updatedFiles);
       return { id, name };
     },
     onSuccess: () => {
@@ -206,7 +238,8 @@ export const DataRoomView: React.FC = () => {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
-      setTempFiles(prev => [...prev, newFile]);
+      const updatedFiles = [...tempFiles, newFile];
+      saveFiles(updatedFiles);
       return newFile;
     },
     onSuccess: () => {
@@ -237,12 +270,12 @@ export const DataRoomView: React.FC = () => {
     e.preventDefault();
     if (selectedFile && uploadFileName.trim()) {
       // For root data room, we need at least one folder
-      if (!folderId && folders.length === 0) {
+      if (!folderId && tempFolders.length === 0) {
         alert('Please create a folder first before uploading files');
         return;
       }
       
-      const targetFolderId = folderId || folders[0]?.id;
+      const targetFolderId = folderId || tempFolders[0]?.id;
       if (targetFolderId) {
         uploadFileMutation.mutate({ file: selectedFile, name: uploadFileName, folderId: targetFolderId });
       }
@@ -273,9 +306,33 @@ export const DataRoomView: React.FC = () => {
   };
 
   const handleFileClick = (fileId: string) => {
-    const file = files.find(f => f.id === fileId);
+    const file = tempFiles.find(f => f.id === fileId);
     if (file && file.blobUrl) {
-      window.open(file.blobUrl, '_blank');
+      // Create a proper PDF viewer URL
+      if (file.fileType === 'application/pdf') {
+        // Open PDF in new tab with proper viewer
+        const pdfWindow = window.open('', '_blank');
+        if (pdfWindow) {
+          pdfWindow.document.write(`
+            <html>
+              <head>
+                <title>${file.name}</title>
+                <style>
+                  body { margin: 0; padding: 0; }
+                  iframe { width: 100%; height: 100vh; border: none; }
+                </style>
+              </head>
+              <body>
+                <iframe src="${file.blobUrl}" type="application/pdf"></iframe>
+              </body>
+            </html>
+          `);
+          pdfWindow.document.close();
+        }
+      } else {
+        // For other file types, open directly
+        window.open(file.blobUrl, '_blank');
+      }
     }
   };
 

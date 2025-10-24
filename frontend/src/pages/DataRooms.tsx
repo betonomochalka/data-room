@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Plus, FolderOpen, Trash2 } from 'lucide-react';
-import api from '../lib/api';
 import { DataRoom, ApiResponse, PaginatedResponse } from '../types';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
@@ -13,21 +12,51 @@ import { formatDate } from '../lib/utils';
 export const DataRooms: React.FC = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newDataRoomName, setNewDataRoomName] = useState('');
+  const [tempDataRooms, setTempDataRooms] = useState<DataRoom[]>([
+    {
+      id: 'temp-1',
+      name: 'Sample Data Room',
+      ownerId: 'temp-user-id',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      _count: { folders: 3 }
+    }
+  ]);
   // const [deleteId, setDeleteId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: dataRoomsData, isLoading } = useQuery<PaginatedResponse<DataRoom>>({
     queryKey: ['dataRooms'],
     queryFn: async () => {
-      const response = await api.get('/data-rooms');
-      return response.data;
+      // Temporary bypass - return mock data
+      console.log('Temporary bypass - returning mock data rooms');
+      return {
+        success: true,
+        data: tempDataRooms,
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: tempDataRooms.length,
+          totalPages: 1
+        }
+      };
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (name: string) => {
-      const response = await api.post<ApiResponse<DataRoom>>('/data-rooms', { name });
-      return response.data.data;
+      // Temporary bypass - create mock data room
+      console.log('Temporary bypass - creating mock data room');
+      const newDataRoom: DataRoom = {
+        id: `temp-${Date.now()}`,
+        name: name,
+        ownerId: 'temp-user-id',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        _count: { folders: 0 }
+      };
+      setTempDataRooms(prev => [...prev, newDataRoom]);
+      return newDataRoom;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dataRooms'] });
@@ -38,8 +67,10 @@ export const DataRooms: React.FC = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await api.delete(`/data-rooms/${id}`);
-      return response.data.data;
+      // Temporary bypass - delete mock data room
+      console.log('Temporary bypass - deleting mock data room');
+      setTempDataRooms(prev => prev.filter(room => room.id !== id));
+      return { id };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dataRooms'] });

@@ -86,8 +86,6 @@ export const Login: React.FC = () => {
             setLoading(false);
           }
         },
-        auto_select: false, // Don't auto-select account
-        cancel_on_tap_outside: false, // Don't cancel when clicking outside
       });
 
       // Try One Tap first, then fallback to prompt

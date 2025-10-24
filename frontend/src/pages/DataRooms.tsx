@@ -15,7 +15,14 @@ export const DataRooms: React.FC = () => {
   const getInitialDataRooms = (): DataRoom[] => {
     const saved = localStorage.getItem('user-data-rooms');
     if (saved) {
-      return JSON.parse(saved);
+      const dataRooms = JSON.parse(saved);
+      return dataRooms.map((dataRoom: DataRoom) => {
+        const folders = JSON.parse(localStorage.getItem(`dataRoom-${dataRoom.id}-folders`) || '[]');
+        return {
+          ...dataRoom,
+          _count: { folders: folders.length }
+        };
+      });
     }
     return []; // Start with empty data rooms
   };
@@ -42,9 +49,20 @@ export const DataRooms: React.FC = () => {
     },
   });
 
+  const calculateDataRoomCounts = (dataRooms: DataRoom[]) => {
+    return dataRooms.map(dataRoom => {
+      const folders = JSON.parse(localStorage.getItem(`dataRoom-${dataRoom.id}-folders`) || '[]');
+      return {
+        ...dataRoom,
+        _count: { folders: folders.length }
+      };
+    });
+  };
+
   const saveDataRooms = (dataRooms: DataRoom[]) => {
-    localStorage.setItem('user-data-rooms', JSON.stringify(dataRooms));
-    setTempDataRooms(dataRooms);
+    const dataRoomsWithCounts = calculateDataRoomCounts(dataRooms);
+    localStorage.setItem('user-data-rooms', JSON.stringify(dataRoomsWithCounts));
+    setTempDataRooms(dataRoomsWithCounts);
   };
 
   const createMutation = useMutation({

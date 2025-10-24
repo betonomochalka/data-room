@@ -50,15 +50,30 @@ export const DataRoomView: React.FC = () => {
   const [tempFolders, setTempFolders] = useState<FolderType[]>(getInitialFolders);
   const [tempFiles, setTempFiles] = useState<FileType[]>(getInitialFiles);
 
+  // Calculate folder counts
+  const calculateFolderCounts = (folders: FolderType[], files: FileType[]) => {
+    return folders.map(folder => ({
+      ...folder,
+      _count: {
+        files: files.filter(file => file.folderId === folder.id).length,
+        children: folders.filter(f => f.parentId === folder.id).length
+      }
+    }));
+  };
+
   // Save to localStorage whenever state changes
   const saveFolders = (folders: FolderType[]) => {
-    localStorage.setItem(`dataRoom-${id}-folders`, JSON.stringify(folders));
-    setTempFolders(folders);
+    const foldersWithCounts = calculateFolderCounts(folders, tempFiles);
+    localStorage.setItem(`dataRoom-${id}-folders`, JSON.stringify(foldersWithCounts));
+    setTempFolders(foldersWithCounts);
   };
 
   const saveFiles = (files: FileType[]) => {
     localStorage.setItem(`dataRoom-${id}-files`, JSON.stringify(files));
     setTempFiles(files);
+    // Update folder counts when files change
+    const foldersWithCounts = calculateFolderCounts(tempFolders, files);
+    setTempFolders(foldersWithCounts);
   };
 
   // Temporary bypass for data room fetching

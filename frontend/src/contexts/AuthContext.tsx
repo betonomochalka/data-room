@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 
 interface AuthContextType {
   user: User | null;
@@ -20,15 +20,10 @@ export const useAuth = () => {
   return context;
 };
 
-// Initialize Supabase client
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL!;
-const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY!;
-
+// Log environment variables for debugging
 console.log('🔍 Environment variables:');
-console.log('REACT_APP_SUPABASE_URL:', supabaseUrl);
-console.log('REACT_APP_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'SET' : 'NOT SET');
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+console.log('REACT_APP_SUPABASE_URL:', process.env.REACT_APP_SUPABASE_URL);
+console.log('REACT_APP_SUPABASE_ANON_KEY:', process.env.REACT_APP_SUPABASE_ANON_KEY ? 'SET' : 'NOT SET');
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);

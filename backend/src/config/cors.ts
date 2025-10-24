@@ -12,8 +12,17 @@ export const corsConfig = {
 // Simplified CORS headers function for Vercel API functions
 // Main CORS headers are handled by vercel.json, this is for additional headers if needed
 export const setCorsHeaders = (res: any, origin?: string) => {
-  // Vercel.json handles main CORS headers, this is for any additional headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // Allow specific frontend domain
+  const allowedOrigins = [
+    'https://data-room-196e.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:3001'
+  ];
+  
+  const requestOrigin = origin;
+  const allowedOrigin = allowedOrigins.includes(requestOrigin) ? requestOrigin : allowedOrigins[0];
+  
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
   res.setHeader('Access-Control-Allow-Methods', corsConfig.methods.join(', '));
   res.setHeader('Access-Control-Allow-Headers', corsConfig.allowedHeaders.join(', '));
   res.setHeader('Access-Control-Allow-Credentials', 'true');

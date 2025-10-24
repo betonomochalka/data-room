@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// Redirect to login page - we only use Google OAuth now
+// Redirect to login page - we only use simple authentication now
 export const Signup: React.FC = () => {
   const navigate = useNavigate();
   

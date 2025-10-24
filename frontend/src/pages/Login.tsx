@@ -86,11 +86,6 @@ export const Login: React.FC = () => {
             setLoading(false);
           }
         },
-        error_callback: (error: any) => {
-          console.error('❌ Google OAuth error:', error);
-          setError('Google authentication failed: ' + (error.type || 'Unknown error'));
-          setLoading(false);
-        },
       });
 
       // Try One Tap first, then fallback to prompt
@@ -101,13 +96,17 @@ export const Login: React.FC = () => {
           if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
             console.log('⚠️ One Tap not displayed, trying popup...');
             // Fallback to popup
-            window.google.accounts.id.prompt();
+            if (window.google?.accounts?.id) {
+              window.google.accounts.id.prompt();
+            }
           }
         });
         console.log('✅ Google One Tap triggered');
       } catch (err) {
         console.log('⚠️ One Tap failed, trying regular prompt...');
-        window.google.accounts.id.prompt();
+        if (window.google?.accounts?.id) {
+          window.google.accounts.id.prompt();
+        }
         console.log('✅ Google prompt triggered');
       }
       

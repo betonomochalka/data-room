@@ -41,6 +41,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      // Redirect to data rooms if user just logged in and is on login page
+      if (session && window.location.pathname === '/login') {
+        window.location.href = '/';
+      }
     });
 
     // Listen for auth changes
@@ -50,6 +55,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      // Redirect to data rooms after successful login
+      if (session && (window.location.pathname === '/login' || window.location.hash.includes('access_token'))) {
+        window.location.href = '/';
+      }
     });
 
     return () => subscription.unsubscribe();

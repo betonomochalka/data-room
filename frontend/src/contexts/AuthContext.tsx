@@ -51,6 +51,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(session?.user ?? null);
       setLoading(false);
       
+      // Debug user information
+      if (session?.user) {
+        console.log('🔍 User authenticated:', {
+          id: session.user.id,
+          email: session.user.email,
+          user_metadata: session.user.user_metadata
+        });
+      }
+      
       // Redirect to data rooms after successful login
       if (session && (window.location.pathname === '/login' || window.location.hash.includes('access_token'))) {
         window.location.href = '/';

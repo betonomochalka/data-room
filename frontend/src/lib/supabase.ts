@@ -6,8 +6,12 @@ const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY!;
 console.log('🔍 Supabase client configuration:');
 console.log('URL:', supabaseUrl);
 console.log('Anon Key:', supabaseAnonKey ? 'SET' : 'NOT SET');
+console.log('Anon Key length:', supabaseAnonKey?.length);
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Test the client
+console.log('🔍 Supabase client created:', !!supabase);
 
 // Database types
 export interface DataRoom {

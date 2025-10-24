@@ -13,7 +13,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
   
-  res.json({ 
+  return res.json({ 
     message: 'Test endpoint is working!',
     timestamp: new Date().toISOString(),
     endpoint: 'test'

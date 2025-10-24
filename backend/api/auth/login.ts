@@ -1,6 +1,8 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { PrismaClient } from '@prisma/client';
 import { generateToken } from '../../src/middleware/auth';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 const prisma = new PrismaClient();
 
@@ -22,42 +24,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { supabaseUser } = req.body;
+    const { email, password } = req.body;
 
-    if (!supabaseUser || !supabaseUser.id || !supabaseUser.email) {
-      return res.status(400).json({ error: 'Invalid user data from Supabase' });
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    console.log('[Auth] Google OAuth - Processing user:', {
-      id: supabaseUser.id,
-      email: supabaseUser.email,
-      provider: supabaseUser.app_metadata?.provider,
+    console.log('[Auth] Test login attempt for email:', email);
+
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email },
     });
 
-    // Check if user exists in our database
-    let user = await prisma.user.findUnique({
-      where: { id: supabaseUser.id },
-    });
-
-    // Create user if doesn't exist (first-time login)
     if (!user) {
-      console.log('[Auth] Creating new user in database');
-      user = await prisma.user.create({
-        data: {
-          id: supabaseUser.id,
-          email: supabaseUser.email,
-          name: supabaseUser.user_metadata?.full_name || 
-                supabaseUser.user_metadata?.name || 
-                supabaseUser.email?.split('@')[0] || 
-                null,
-        },
-      });
-      console.log('[Auth] User created successfully');
-    } else {
-      console.log('[Auth] Existing user found');
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Generate our JWT token
+    // Check password (for test user, we'll use a simple comparison)
+    // In production, you'd use bcrypt to compare hashed passwords
+    const isValidPassword = password === 'testest' && email === 'test';
+    
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    console.log('[Auth] Login successful for user:', user.email);
+
+    // Generate JWT token
     const token = generateToken(user.id);
 
     return res.status(200).json({
@@ -70,7 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         },
         token,
       },
-      message: 'Google sign in successful',
+      message: 'Login successful',
     });
 
   } catch (error: any) {

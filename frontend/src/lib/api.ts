@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'https://data-room-seven.vercel.app/api';
+const API_URL = process.env.REACT_APP_API_URL || 'https://data-room-seven.vercel.app/api';
 
 console.log('🔗 [API] Base URL configured:', API_URL);
 console.log('🔗 [API] Environment variable REACT_APP_API_URL:', process.env.REACT_APP_API_URL);

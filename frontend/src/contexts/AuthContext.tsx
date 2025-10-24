@@ -5,9 +5,7 @@ import { api } from '../lib/api';
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: (credential: string) => Promise<void>;
-  signup: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
 }
@@ -55,19 +53,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initializeAuth();
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const response = await api.post<AuthResponse>('/auth/login', { email, password });
-    
-    if (response.data.success) {
-      const { user, token } = response.data.data;
-      setUser(user);
-      setToken(token);
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-    } else {
-      throw new Error(response.data.message || 'Login failed');
-    }
-  };
 
   const loginWithGoogle = async (credential: string) => {
     const response = await api.post<AuthResponse>('/auth/google', { credential });
@@ -83,19 +68,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const signup = async (email: string, password: string, name?: string) => {
-    const response = await api.post<AuthResponse>('/auth/signup', { email, password, name });
-    
-    if (response.data.success) {
-      const { user, token } = response.data.data;
-      setUser(user);
-      setToken(token);
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-    } else {
-      throw new Error(response.data.message || 'Signup failed');
-    }
-  };
 
   const logout = () => {
     setUser(null);
@@ -105,7 +77,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, loginWithGoogle, signup, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, loginWithGoogle, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

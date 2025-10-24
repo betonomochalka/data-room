@@ -1,24 +1,18 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
-
-// Inline CORS headers function
-const setCorsHeaders = (res: VercelResponse) => {
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-};
+import { setCorsHeaders, handlePreflight } from '../../src/config/cors';
 
 const prisma = new PrismaClient();
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Set CORS headers
-  setCorsHeaders(res);
+  setCorsHeaders(res, req.headers.origin);
 
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    handlePreflight(req, res);
+    return;
   }
 
   // Only allow GET requests

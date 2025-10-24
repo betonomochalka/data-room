@@ -68,51 +68,6 @@ router.post('/google', asyncHandler(async (req: Request, res: Response) => {
   }
 }));
 
-// Simple test authentication
-router.post('/login', asyncHandler(async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    throw createError('Email and password are required', 400);
-  }
-
-  console.log('[Auth] Test login attempt for email:', email);
-
-  // Find user by email
-  const user = await prisma.user.findUnique({
-    where: { email },
-  });
-
-  if (!user) {
-    throw createError('Invalid credentials', 401);
-  }
-
-  // Check password (for test user, we'll use a simple comparison)
-  // In production, you'd use bcrypt to compare hashed passwords
-  const isValidPassword = password === 'testest' && email === 'test';
-  
-  if (!isValidPassword) {
-    throw createError('Invalid credentials', 401);
-  }
-
-  console.log('[Auth] Login successful for user:', user.email);
-
-  // Generate JWT token
-  const token = generateToken(user.id);
-
-  res.json({
-    success: true,
-    data: {
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-      },
-      token,
-    },
-    message: 'Login successful',
-  });
-}));
 
 // Get current user
 router.get('/me', asyncHandler(async (req: Request, res: Response) => {

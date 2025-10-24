@@ -17,19 +17,21 @@ export const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await api.post('/auth/login', {
-        email,
-        password,
-      });
-
-      if (response.data.success) {
-        // Store token in localStorage
-        localStorage.setItem('token', response.data.data.token);
-        // Navigate to dashboard
-        navigate('/dashboard');
-      }
+      // Temporary bypass - simulate successful login
+      console.log('Temporary login bypass - backend not accessible');
+      
+      // Store fake token
+      localStorage.setItem('token', 'temp-token-123');
+      localStorage.setItem('user', JSON.stringify({
+        id: 'temp-user-id',
+        email: email,
+        name: 'Test User'
+      }));
+      
+      // Navigate to dashboard
+      navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed');
+      setError('Login temporarily disabled - backend not accessible');
     } finally {
       setLoading(false);
     }
@@ -89,9 +91,9 @@ export const Login: React.FC = () => {
             </Button>
 
             <div className="text-xs text-center text-muted-foreground">
-              <p>Test credentials:</p>
-              <p>Email: <strong>test</strong></p>
-              <p>Password: <strong>testest</strong></p>
+              <p className="text-yellow-600 font-semibold">⚠️ Temporary Login Bypass</p>
+              <p>Backend not accessible - using temporary login</p>
+              <p>Any email/password will work</p>
             </div>
           </form>
         </CardContent>

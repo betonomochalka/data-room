@@ -37,8 +37,8 @@ REACT_APP_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXB
 Go to your Supabase Dashboard → **SQL Editor** and run this SQL:
 
 ```sql
--- Create data_rooms table
-CREATE TABLE data_rooms (
+-- Create data_rooms table (if it doesn't exist)
+CREATE TABLE IF NOT EXISTS data_rooms (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   description TEXT,
@@ -47,8 +47,8 @@ CREATE TABLE data_rooms (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create folders table
-CREATE TABLE folders (
+-- Create folders table (if it doesn't exist)
+CREATE TABLE IF NOT EXISTS folders (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   data_room_id UUID REFERENCES data_rooms(id) ON DELETE CASCADE,
@@ -58,8 +58,8 @@ CREATE TABLE folders (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create files table
-CREATE TABLE files (
+-- Create files table (if it doesn't exist)
+CREATE TABLE IF NOT EXISTS files (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   data_room_id UUID REFERENCES data_rooms(id) ON DELETE CASCADE,
@@ -77,6 +77,11 @@ ALTER TABLE data_rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE folders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE files ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist (to avoid conflicts)
+DROP POLICY IF EXISTS "Users can only see their own data rooms" ON data_rooms;
+DROP POLICY IF EXISTS "Users can only see folders in their data rooms" ON folders;
+DROP POLICY IF EXISTS "Users can only see files in their data rooms" ON files;
+
 -- Create policies for data_rooms
 CREATE POLICY "Users can only see their own data rooms" ON data_rooms
   FOR ALL USING (auth.uid() = user_id);
@@ -89,13 +94,13 @@ CREATE POLICY "Users can only see folders in their data rooms" ON folders
 CREATE POLICY "Users can only see files in their data rooms" ON files
   FOR ALL USING (auth.uid() = user_id);
 
--- Create indexes for better performance
-CREATE INDEX idx_data_rooms_user_id ON data_rooms(user_id);
-CREATE INDEX idx_folders_data_room_id ON folders(data_room_id);
-CREATE INDEX idx_folders_user_id ON folders(user_id);
-CREATE INDEX idx_files_data_room_id ON files(data_room_id);
-CREATE INDEX idx_files_folder_id ON files(folder_id);
-CREATE INDEX idx_files_user_id ON files(user_id);
+-- Create indexes for better performance (if they don't exist)
+CREATE INDEX IF NOT EXISTS idx_data_rooms_user_id ON data_rooms(user_id);
+CREATE INDEX IF NOT EXISTS idx_folders_data_room_id ON folders(data_room_id);
+CREATE INDEX IF NOT EXISTS idx_folders_user_id ON folders(user_id);
+CREATE INDEX IF NOT EXISTS idx_files_data_room_id ON files(data_room_id);
+CREATE INDEX IF NOT EXISTS idx_files_folder_id ON files(folder_id);
+CREATE INDEX IF NOT EXISTS idx_files_user_id ON files(user_id);
 ```
 
 ### 3. Supabase Google OAuth Setup

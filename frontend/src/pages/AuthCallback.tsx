@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
 
 export const AuthCallback: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { setUser, setToken } = useAuth();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -37,8 +39,11 @@ export const AuthCallback: React.FC = () => {
         });
 
         if (response.data.success) {
-          localStorage.setItem('token', response.data.data.token);
-          localStorage.setItem('user', JSON.stringify(response.data.data.user));
+          const { user, token } = response.data.data;
+          localStorage.setItem('token', token);
+          localStorage.setItem('user', JSON.stringify(user));
+          setUser(user);
+          setToken(token);
           console.log('✅ Login successful, redirecting...');
           navigate('/');
         } else {

@@ -8,6 +8,8 @@ interface AuthContextType {
   loginWithGoogle: (credential: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
+  setUser: (user: User | null) => void;
+  setToken: (token: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -77,7 +79,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loginWithGoogle, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, loginWithGoogle, logout, loading, setUser, setToken }}>
       {children}
     </AuthContext.Provider>
   );

@@ -179,12 +179,26 @@ export const DataRoomView: React.FC = () => {
   const uploadFileMutation = useMutation({
     mutationFn: async ({ file, name, folderId }: { file: File; name: string; folderId: string }) => {
       console.log('Temporary bypass - creating mock file');
+      
+      // Convert file to base64 for storage
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      
+      const base64Data = await base64Promise;
+      
       const newFile: FileType = {
         id: `temp-file-${Date.now()}`,
         name: name,
         fileType: file.type || 'application/pdf',
         size: file.size,
-        blobUrl: URL.createObjectURL(file),
+        blobUrl: base64Data, // Store as base64 data URL
         folderId: folderId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -263,13 +277,28 @@ export const DataRoomView: React.FC = () => {
     }
   };
 
-  const filteredFolders = folders.filter((folder: FolderType) =>
-    folder.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Search across all folders and files, not just current view
+  const searchAllContent = () => {
+    if (!searchQuery.trim()) {
+      return { folders, files };
+    }
 
-  const filteredFiles = files.filter((file: FileType) =>
-    file.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    const query = searchQuery.toLowerCase();
+    const allFolders = tempFolders;
+    const allFiles = tempFiles;
+
+    // Find matching folders and files
+    const matchingFolders = allFolders.filter(folder => 
+      folder.name.toLowerCase().includes(query)
+    );
+    const matchingFiles = allFiles.filter(file => 
+      file.name.toLowerCase().includes(query)
+    );
+
+    return { folders: matchingFolders, files: matchingFiles };
+  };
+
+  const { folders: filteredFolders, files: filteredFiles } = searchAllContent();
 
   const handleFolderClick = (folderId: string) => {
     navigate(`/data-rooms/${id}/folders/${folderId}`);
@@ -288,20 +317,36 @@ export const DataRoomView: React.FC = () => {
               <head>
                 <title>${file.name}</title>
                 <style>
-                  body { margin: 0; padding: 0; }
-                  iframe { width: 100%; height: 100vh; border: none; }
+                  body { margin: 0; padding: 0; background: #f5f5f5; }
+                  .container { width: 100%; height: 100vh; display: flex; flex-direction: column; }
+                  .header { background: white; padding: 10px; border-bottom: 1px solid #ddd; }
+                  .viewer { flex: 1; background: white; }
+                  iframe { width: 100%; height: 100%; border: none; }
                 </style>
               </head>
               <body>
-                <iframe src="${file.blobUrl}" type="application/pdf"></iframe>
+                <div class="container">
+                  <div class="header">
+                    <h3>${file.name}</h3>
+                  </div>
+                  <div class="viewer">
+                    <iframe src="${file.blobUrl}" type="application/pdf"></iframe>
+                  </div>
+                </div>
               </body>
             </html>
           `);
           pdfWindow.document.close();
         }
       } else {
-        // For other file types, open directly
-        window.open(file.blobUrl, '_blank');
+        // For other file types, create a download link
+        const link = document.createElement('a');
+        link.href = file.blobUrl;
+        link.download = file.name;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       }
     }
   };
@@ -421,24 +466,29 @@ export const DataRoomView: React.FC = () => {
             <div>
               <h2 className="text-xl font-semibold mb-4">Files</h2>
               <div className="grid grid-cols-1 gap-2">
-                {filteredFiles.map((file: FileType) => (
-                  <Card key={file.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 flex-1">
-                          <FileText className="h-6 w-6 text-red-500" />
-                          <div className="min-w-0">
-                            <h3 className="font-medium truncate">{file.name}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {file.size ? formatBytes(file.size) : 'Unknown size'} · {formatDate(file.createdAt)}
-                            </p>
+                {filteredFiles.map((file: FileType) => {
+                  const fileFolder = tempFolders.find(f => f.id === file.folderId);
+                  return (
+                    <Card key={file.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3 flex-1">
+                            <FileText className="h-6 w-6 text-red-500" />
+                            <div className="min-w-0">
+                              <h3 className="font-medium truncate">{file.name}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {file.size ? formatBytes(file.size) : 'Unknown size'} · {formatDate(file.createdAt)}
+                                {searchQuery.trim() && fileFolder && (
+                                  <span className="ml-2 text-blue-600">in {fileFolder.name}</span>
+                                )}
+                              </p>
+                            </div>
                           </div>
-                        </div>
                         <div className="flex gap-2">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => window.open(file.blobUrl, '_blank')}
+                            onClick={() => handleFileClick(file.id)}
                           >
                             View
                           </Button>
@@ -468,7 +518,8 @@ export const DataRoomView: React.FC = () => {
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

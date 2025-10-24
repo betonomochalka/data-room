@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/Dialog';
 import { Input } from '../components/ui/Input';
+import { FileTree } from '../components/FileTree';
 import { formatDate, formatBytes } from '../lib/utils';
 
 export const DataRoomView: React.FC = () => {
@@ -32,9 +33,48 @@ export const DataRoomView: React.FC = () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       _count: { files: 2, children: 1 }
+    },
+    {
+      id: 'temp-folder-2',
+      name: 'Images',
+      dataRoomId: id || 'temp-room',
+      parentId: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      _count: { files: 0, children: 0 }
+    },
+    {
+      id: 'temp-folder-3',
+      name: 'Subfolder',
+      dataRoomId: id || 'temp-room',
+      parentId: 'temp-folder-1',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      _count: { files: 0, children: 0 }
     }
   ]);
-  const [tempFiles, setTempFiles] = useState<FileType[]>([]);
+  const [tempFiles, setTempFiles] = useState<FileType[]>([
+    {
+      id: 'temp-file-1',
+      name: 'Sample Document.pdf',
+      fileType: 'application/pdf',
+      size: 1024000,
+      blobUrl: '#',
+      folderId: 'temp-folder-1',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'temp-file-2',
+      name: 'Another File.pdf',
+      fileType: 'application/pdf',
+      size: 2048000,
+      blobUrl: '#',
+      folderId: 'temp-folder-1',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  ]);
 
   // Temporary bypass for data room fetching
   const { data: dataRoomData, isLoading: isLoadingDataRoom } = useQuery<ApiResponse<DataRoom>>({
@@ -228,8 +268,31 @@ export const DataRoomView: React.FC = () => {
     file.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleFolderClick = (folderId: string) => {
+    navigate(`/data-rooms/${id}/folders/${folderId}`);
+  };
+
+  const handleFileClick = (fileId: string) => {
+    const file = files.find(f => f.id === fileId);
+    if (file && file.blobUrl) {
+      window.open(file.blobUrl, '_blank');
+    }
+  };
+
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="flex h-screen">
+      {/* File Tree Sidebar */}
+      <FileTree
+        folders={tempFolders}
+        files={tempFiles}
+        onFolderClick={handleFolderClick}
+        onFileClick={handleFileClick}
+        currentPath={folderId}
+      />
+      
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto">
+        <div className="container mx-auto px-4 py-8">
       <div className="flex items-center gap-4 mb-6">
         <Button variant="outline" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -481,6 +544,8 @@ export const DataRoomView: React.FC = () => {
           </form>
         </DialogContent>
       </Dialog>
+        </div>
+      </div>
     </div>
   );
 };

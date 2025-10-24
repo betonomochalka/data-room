@@ -2,9 +2,12 @@
     "version": 2,
     "builds": [
         {
-            "src": "api/**/*.ts",
+            "src": "api/*.ts",
             "use": "@vercel/node"
         }
+    ],
+    "ignore": [
+        "src/**/*"
     ],
     "routes": [
         {
@@ -20,7 +23,7 @@
         }
     ],
     "functions": {
-        "api/**/*.ts": {
+        "api/*.ts": {
             "maxDuration": 30
         }
     },

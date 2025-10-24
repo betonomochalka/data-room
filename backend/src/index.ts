@@ -102,4 +102,5 @@ app.listen(PORT, () => {
   console.log(`🔗 Auth endpoint: http://localhost:${PORT}/api/auth/login`);
 });
 
-export default app;
+// Export removed to prevent Vercel from detecting this as a serverless function
+// This file is only for local development

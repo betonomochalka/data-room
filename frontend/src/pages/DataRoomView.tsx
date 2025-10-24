@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { ArrowLeft, Plus, Folder, FileText, Trash2, Edit, Upload, Search } from 'lucide-react';
-import api from '../lib/api';
 import { DataRoom, Folder as FolderType, File as FileType, ApiResponse } from '../types';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
@@ -13,7 +12,6 @@ import { formatDate, formatBytes } from '../lib/utils';
 export const DataRoomView: React.FC = () => {
   const { id, folderId } = useParams<{ id: string; folderId?: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
@@ -23,83 +21,116 @@ export const DataRoomView: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadFileName, setUploadFileName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Temporary state for mock data
+  const [tempFolders, setTempFolders] = useState<FolderType[]>([
+    {
+      id: 'temp-folder-1',
+      name: 'Documents',
+      dataRoomId: id || 'temp-room',
+      parentId: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      _count: { files: 2, children: 1 }
+    }
+  ]);
+  const [tempFiles, setTempFiles] = useState<FileType[]>([]);
 
-  // Fetch data room or folder contents
+  // Temporary bypass for data room fetching
   const { data: dataRoomData, isLoading: isLoadingDataRoom } = useQuery<ApiResponse<DataRoom>>({
     queryKey: ['dataRoom', id],
     queryFn: async () => {
-      const response = await api.get(`/data-rooms/${id}`);
-      return response.data;
+      console.log('Temporary bypass - returning mock data room');
+      return {
+        success: true,
+        data: {
+          id: id || 'temp-room',
+          name: 'Sample Data Room',
+          ownerId: 'temp-user-id',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          folders: tempFolders
+        }
+      };
     },
     enabled: !folderId,
   });
 
+  // Temporary bypass for folder fetching
   const { data: folderData, isLoading: isLoadingFolder } = useQuery({
     queryKey: ['folder', folderId],
     queryFn: async () => {
-      const response = await api.get(`/folders/${folderId}/contents`);
-      return response.data;
+      console.log('Temporary bypass - returning mock folder data');
+      return {
+        success: true,
+        data: {
+          folder: { id: folderId, name: 'Sample Folder' },
+          children: tempFolders,
+          files: tempFiles
+        }
+      };
     },
     enabled: !!folderId,
   });
 
   const createFolderMutation = useMutation({
     mutationFn: async (name: string) => {
-      console.log('[CreateFolder] Sending request:', {
-        name,
-        dataRoomId: id,
+      console.log('Temporary bypass - creating mock folder');
+      const newFolder: FolderType = {
+        id: `temp-folder-${Date.now()}`,
+        name: name,
+        dataRoomId: id || 'temp-room',
         parentId: folderId || null,
-      });
-      
-      const response = await api.post('/folders', {
-        name,
-        dataRoomId: id,
-        parentId: folderId || null,
-      });
-      
-      console.log('[CreateFolder] Success:', response.data);
-      return response.data.data;
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        _count: { files: 0, children: 0 }
+      };
+      setTempFolders(prev => [...prev, newFolder]);
+      return newFolder;
     },
     onSuccess: () => {
-      console.log('[CreateFolder] Invalidating queries');
-      queryClient.invalidateQueries({ queryKey: folderId ? ['folder', folderId] : ['dataRoom', id] });
+      console.log('Temporary bypass - folder created successfully');
       setIsCreateFolderDialogOpen(false);
       setNewFolderName('');
     },
     onError: (error: any) => {
-      console.error('[CreateFolder] Error:', error);
-      console.error('[CreateFolder] Error response:', error.response?.data);
-      alert(`Failed to create folder: ${error.response?.data?.error || error.message}`);
+      console.error('Temporary bypass - folder creation error:', error);
+      alert(`Failed to create folder: ${error.message}`);
     },
   });
 
   const deleteFolderMutation = useMutation({
-    mutationFn: async (folderId: string) => {
-      const response = await api.delete(`/folders/${folderId}`);
-      return response.data.data;
+    mutationFn: async (folderIdToDelete: string) => {
+      console.log('Temporary bypass - deleting mock folder');
+      setTempFolders(prev => prev.filter(folder => folder.id !== folderIdToDelete));
+      return { id: folderIdToDelete };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: folderId ? ['folder', folderId] : ['dataRoom', id] });
+      console.log('Temporary bypass - folder deleted successfully');
     },
   });
 
   const deleteFileMutation = useMutation({
     mutationFn: async (fileId: string) => {
-      const response = await api.delete(`/files/${fileId}`);
-      return response.data.data;
+      console.log('Temporary bypass - deleting mock file');
+      setTempFiles(prev => prev.filter(file => file.id !== fileId));
+      return { id: fileId };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: folderId ? ['folder', folderId] : ['dataRoom', id] });
+      console.log('Temporary bypass - file deleted successfully');
     },
   });
 
   const renameFolderMutation = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      const response = await api.put(`/folders/${id}`, { name });
-      return response.data.data;
+      console.log('Temporary bypass - renaming mock folder');
+      setTempFolders(prev => prev.map(folder => 
+        folder.id === id ? { ...folder, name, updatedAt: new Date().toISOString() } : folder
+      ));
+      return { id, name };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: folderId ? ['folder', folderId] : ['dataRoom', id] });
+      console.log('Temporary bypass - folder renamed successfully');
       setIsRenameDialogOpen(false);
       setRenameItem(null);
       setNewName('');
@@ -108,11 +139,14 @@ export const DataRoomView: React.FC = () => {
 
   const renameFileMutation = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      const response = await api.put(`/files/${id}`, { name });
-      return response.data.data;
+      console.log('Temporary bypass - renaming mock file');
+      setTempFiles(prev => prev.map(file => 
+        file.id === id ? { ...file, name, updatedAt: new Date().toISOString() } : file
+      ));
+      return { id, name };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: folderId ? ['folder', folderId] : ['dataRoom', id] });
+      console.log('Temporary bypass - file renamed successfully');
       setIsRenameDialogOpen(false);
       setRenameItem(null);
       setNewName('');
@@ -121,35 +155,29 @@ export const DataRoomView: React.FC = () => {
 
   const uploadFileMutation = useMutation({
     mutationFn: async ({ file, name, folderId }: { file: File; name: string; folderId: string }) => {
-      console.log('[UploadFile] Uploading:', { fileName: file.name, size: file.size, name, folderId });
-      
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('name', name);
-      formData.append('folderId', folderId);
-
-      const response = await api.post('/files/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      
-      console.log('[UploadFile] Success:', response.data);
-      return response.data.data;
+      console.log('Temporary bypass - creating mock file');
+      const newFile: FileType = {
+        id: `temp-file-${Date.now()}`,
+        name: name,
+        fileType: file.type || 'application/pdf',
+        size: file.size,
+        blobUrl: URL.createObjectURL(file),
+        folderId: folderId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setTempFiles(prev => [...prev, newFile]);
+      return newFile;
     },
     onSuccess: () => {
-      console.log('[UploadFile] Invalidating queries');
-      queryClient.invalidateQueries({ queryKey: folderId ? ['folder', folderId] : ['dataRoom', id] });
+      console.log('Temporary bypass - file uploaded successfully');
       setIsUploadDialogOpen(false);
       setSelectedFile(null);
       setUploadFileName('');
     },
     onError: (error: any) => {
-      console.error('[UploadFile] Error:', error);
-      console.error('[UploadFile] Error response:', error.response?.data);
-      
-      const errorMessage = error.response?.data?.error || error.message || 'Failed to upload file';
-      alert(`Upload failed: ${errorMessage}`);
+      console.error('Temporary bypass - file upload error:', error);
+      alert(`Upload failed: ${error.message}`);
     },
   });
 

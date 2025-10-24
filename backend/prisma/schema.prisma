@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -15,45 +12,41 @@ model DataRoom {
   name        String
   description String?
   user_id     String   @map("user_id")
-  folders     Folder[]
-  files       File[]
   created_at  DateTime @default(now()) @map("created_at")
   updated_at  DateTime @updatedAt @map("updated_at")
+  files       File[]
+  folders     Folder[]
 
   @@map("data_rooms")
 }
 
 model Folder {
-  id             String   @id @default(uuid())
-  name           String
-  data_room_id   String   @map("data_room_id")
-  parent_folder_id String? @map("parent_folder_id")
-  user_id        String   @map("user_id")
-  created_at     DateTime @default(now()) @map("created_at")
-  updated_at     DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  data_room      DataRoom @relation(fields: [data_room_id], references: [id], onDelete: Cascade)
-  parent_folder  Folder?  @relation("FolderHierarchy", fields: [parent_folder_id], references: [id], onDelete: Cascade)
-  sub_folders    Folder[] @relation("FolderHierarchy")
+  id               String   @id @default(uuid())
+  name             String
+  data_room_id     String   @map("data_room_id")
+  parent_folder_id String?  @map("parent_folder_id")
+  user_id          String   @map("user_id")
+  created_at       DateTime @default(now()) @map("created_at")
+  updated_at       DateTime @updatedAt @map("updated_at")
+  data_room        DataRoom @relation(fields: [data_room_id], references: [id], onDelete: Cascade)
+  parent_folder    Folder?  @relation("FolderHierarchy", fields: [parent_folder_id], references: [id], onDelete: Cascade)
+  sub_folders      Folder[] @relation("FolderHierarchy")
 
   @@map("folders")
 }
 
 model File {
-  id          String   @id @default(uuid())
-  name        String
+  id           String   @id @default(uuid())
+  name         String
   data_room_id String   @map("data_room_id")
-  folder_id   String?  @map("folder_id")
-  user_id     String   @map("user_id")
-  file_size   BigInt?  @map("file_size")
-  mime_type   String?  @map("mime_type")
-  file_path   String?  @map("file_path")
-  created_at  DateTime @default(now()) @map("created_at")
-  updated_at  DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  data_room   DataRoom @relation(fields: [data_room_id], references: [id], onDelete: Cascade)
+  folder_id    String?  @map("folder_id")
+  user_id      String   @map("user_id")
+  file_size    BigInt?  @map("file_size")
+  mime_type    String?  @map("mime_type")
+  file_path    String?  @map("file_path")
+  created_at   DateTime @default(now()) @map("created_at")
+  updated_at   DateTime @updatedAt @map("updated_at")
+  data_room    DataRoom @relation(fields: [data_room_id], references: [id], onDelete: Cascade)
 
   @@map("files")
 }

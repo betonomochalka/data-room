@@ -24,6 +24,10 @@ export const useAuth = () => {
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL!;
 const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY!;
 
+console.log('🔍 Environment variables:');
+console.log('REACT_APP_SUPABASE_URL:', supabaseUrl);
+console.log('REACT_APP_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'SET' : 'NOT SET');
+
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -57,12 +61,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`,
+          redirectTo: window.location.origin,
         },
       });
       if (error) throw error;
     } catch (error) {
       console.error('Error signing in with Google:', error);
+      setLoading(false);
       throw error;
     }
   };

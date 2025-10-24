@@ -20,5 +20,15 @@
     },
     "env": {
         "NODE_ENV": "production"
+    },
+    "build": {
+        "env": {
+            "DATABASE_URL": "@database_url",
+            "JWT_SECRET": "@jwt_secret",
+            "SUPABASE_URL": "@supabase_url",
+            "SUPABASE_SERVICE_KEY": "@supabase_service_key",
+            "GOOGLE_CLIENT_ID": "@google_client_id",
+            "ALLOWED_ORIGINS": "@allowed_origins"
+        }
     }
 }

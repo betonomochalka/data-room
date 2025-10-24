@@ -19,7 +19,7 @@ export const setCorsHeaders = (res: any, origin?: string) => {
     'http://localhost:3001'
   ];
   
-  const requestOrigin = origin;
+  const requestOrigin = origin || '';
   const allowedOrigin = allowedOrigins.includes(requestOrigin) ? requestOrigin : allowedOrigins[0];
   
   res.setHeader('Access-Control-Allow-Origin', allowedOrigin);

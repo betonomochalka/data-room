@@ -1,14 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
-
-// Inline CORS headers function
-const setCorsHeaders = (res: VercelResponse) => {
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-};
+import { setCorsHeaders, handlePreflight } from '../src/config/cors';
 
 // Inline authentication middleware
 const authenticateToken = (req: VercelRequest): string | null => {
@@ -30,10 +23,10 @@ const authenticateToken = (req: VercelRequest): string | null => {
 const prisma = new PrismaClient();
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  setCorsHeaders(res);
+  setCorsHeaders(res, req.headers.origin);
 
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
+    handlePreflight(req, res);
     return;
   }
 
@@ -43,15 +36,54 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const { id } = req.query;
-
-  if (!id || typeof id !== 'string') {
-    res.status(400).json({ error: 'Folder ID is required' });
-    return;
-  }
+  const { id, action } = req.query;
 
   try {
-    if (req.method === 'GET') {
+    if (req.method === 'POST' && !id) {
+      // Create a new folder
+      const { name, dataRoomId, parentId } = req.body;
+
+      if (!name || !dataRoomId) {
+        res.status(400).json({ error: 'Name and dataRoomId are required' });
+        return;
+      }
+
+      // Verify the user owns the data room
+      const dataRoom = await prisma.dataRoom.findFirst({
+        where: { 
+          id: dataRoomId,
+          ownerId: userId 
+        }
+      });
+
+      if (!dataRoom) {
+        res.status(404).json({ error: 'Data room not found' });
+        return;
+      }
+
+      const folder = await prisma.folder.create({
+        data: {
+          name,
+          dataRoomId,
+          parentId: parentId || null,
+        },
+        include: {
+          _count: {
+            select: { 
+              files: true,
+              children: true 
+            }
+          }
+        }
+      });
+
+      res.status(201).json({
+        success: true,
+        data: folder,
+        message: 'Folder created successfully'
+      });
+
+    } else if (req.method === 'GET' && id && typeof id === 'string' && !action) {
       // Get specific folder with its contents
       const folder = await prisma.folder.findFirst({
         where: { 
@@ -88,7 +120,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           files: folder.files
         }
       });
-    } else if (req.method === 'PATCH') {
+
+    } else if (req.method === 'PATCH' && id && typeof id === 'string') {
       // Update folder
       const { name } = req.body;
 
@@ -129,7 +162,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         data: updatedFolder,
         message: 'Folder updated successfully'
       });
-    } else if (req.method === 'DELETE') {
+
+    } else if (req.method === 'DELETE' && id && typeof id === 'string') {
       // Delete folder
       const folder = await prisma.folder.findFirst({
         where: { 
@@ -153,11 +187,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         success: true,
         message: 'Folder deleted successfully'
       });
+
+    } else if (action === 'files' && id && typeof id === 'string') {
+      // Get files for a folder
+      const files = await prisma.file.findMany({
+        where: { 
+          folderId: id,
+          folder: {
+            dataRoom: {
+              ownerId: userId
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      res.status(200).json({
+        success: true,
+        data: files
+      });
+
     } else {
       res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (error) {
-    console.error('Folder API error:', error);
+    console.error('Folders API error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 }

@@ -32,7 +32,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (storedToken) {
         try {
           // Verify token with backend
-          const response = await api.get('/auth/me');
+          const response = await api.get('/auth?action=me');
           if (response.data.success) {
             setToken(storedToken);
             setUser(response.data.data.user);
@@ -55,7 +55,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
 
   const loginWithGoogle = async (credential: string) => {
-    const response = await api.post<AuthResponse>('/auth/google', { credential });
+    const response = await api.post<AuthResponse>('/auth?action=google', { credential });
     
     if (response.data.success) {
       const { user, token } = response.data.data;

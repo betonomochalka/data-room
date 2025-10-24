@@ -1,14 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
-
-// Inline CORS headers function
-const setCorsHeaders = (res: VercelResponse) => {
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-};
+import { setCorsHeaders, handlePreflight } from '../src/config/cors';
 
 // Inline authentication middleware
 const authenticateToken = (req: VercelRequest): string | null => {
@@ -30,10 +23,10 @@ const authenticateToken = (req: VercelRequest): string | null => {
 const prisma = new PrismaClient();
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  setCorsHeaders(res);
+  setCorsHeaders(res, req.headers.origin);
 
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
+    handlePreflight(req, res);
     return;
   }
 
@@ -43,15 +36,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const { id } = req.query;
-
-  if (!id || typeof id !== 'string') {
-    res.status(400).json({ error: 'File ID is required' });
-    return;
-  }
+  const { id, action } = req.query;
 
   try {
-    if (req.method === 'PATCH') {
+    if (req.method === 'POST' && action === 'upload') {
+      // Handle file upload
+      const { name, folderId } = req.body;
+
+      if (!name || !folderId) {
+        res.status(400).json({ error: 'Name and folderId are required' });
+        return;
+      }
+
+      // Verify the user has access to the folder
+      const folder = await prisma.folder.findFirst({
+        where: { 
+          id: folderId,
+          dataRoom: {
+            ownerId: userId
+          }
+        }
+      });
+
+      if (!folder) {
+        res.status(404).json({ error: 'Folder not found' });
+        return;
+      }
+
+      // For now, create a placeholder file record
+      // In a real implementation, you would handle the actual file upload here
+      const file = await prisma.file.create({
+        data: {
+          name,
+          fileType: 'application/pdf', // Default to PDF for now
+          size: 0, // Placeholder size
+          blobUrl: '', // Placeholder URL
+          folderId,
+        }
+      });
+
+      res.status(201).json({
+        success: true,
+        data: file,
+        message: 'File uploaded successfully'
+      });
+
+    } else if (req.method === 'PATCH' && id && typeof id === 'string') {
       // Update file
       const { name } = req.body;
 
@@ -86,7 +116,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         data: updatedFile,
         message: 'File updated successfully'
       });
-    } else if (req.method === 'DELETE') {
+
+    } else if (req.method === 'DELETE' && id && typeof id === 'string') {
       // Delete file
       const file = await prisma.file.findFirst({
         where: { 
@@ -112,11 +143,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         success: true,
         message: 'File deleted successfully'
       });
+
     } else {
       res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (error) {
-    console.error('File API error:', error);
+    console.error('Files API error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 }

@@ -52,7 +52,7 @@ export const DataRoomView: React.FC = () => {
   const { data: foldersData } = useQuery({
     queryKey: ['folders', id],
     queryFn: async () => {
-      const response = await api.get(`/data-rooms/${id}/folders`);
+      const response = await api.get(`/data-rooms?id=${id}&action=folders`);
       return response.data;
     },
     enabled: !!id,
@@ -62,7 +62,7 @@ export const DataRoomView: React.FC = () => {
   const { data: filesData } = useQuery({
     queryKey: ['files', id, folderId],
     queryFn: async () => {
-      const response = await api.get(folderId ? `/folders/${folderId}/files` : `/data-rooms/${id}/files`);
+      const response = await api.get(folderId ? `/folders?id=${folderId}&action=files` : `/data-rooms?id=${id}&action=files`);
       return response.data;
     },
     enabled: !!id,
@@ -159,7 +159,7 @@ export const DataRoomView: React.FC = () => {
       formData.append('name', name);
       formData.append('folderId', folderId);
       
-      const response = await api.post('/files/upload', formData, {
+      const response = await api.post('/files?action=upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

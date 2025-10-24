@@ -192,7 +192,7 @@ app.listen(PORT, () => {
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🔗 Root endpoint: http://localhost:${PORT}/`);
   console.log(`🔗 CORS test: http://localhost:${PORT}/api/cors-test`);
-  console.log(`🔗 Auth endpoint: http://localhost:${PORT}/api/auth/google`);
+  console.log(`🔗 Auth endpoint: http://localhost:${PORT}/api/auth/login`);
 });
 
 export default app;

@@ -1,50 +1,42 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { supabaseAnon } from '../utils/supabase';
 import { generateToken } from '../middleware/auth';
 import { asyncHandler, createError } from '../middleware/errorHandler';
+import bcrypt from 'bcryptjs';
 
 const router = Router();
 const prisma = new PrismaClient();
 
-// Google OAuth - Primary authentication method
-router.post('/google', asyncHandler(async (req: Request, res: Response) => {
-  const { supabaseUser } = req.body;
+// Simple test authentication
+router.post('/login', asyncHandler(async (req: Request, res: Response) => {
+  const { email, password } = req.body;
 
-  if (!supabaseUser || !supabaseUser.id || !supabaseUser.email) {
-    throw createError('Invalid user data from Supabase', 400);
+  if (!email || !password) {
+    throw createError('Email and password are required', 400);
   }
 
-  console.log('[Auth] Google OAuth - Processing user:', {
-    id: supabaseUser.id,
-    email: supabaseUser.email,
-    provider: supabaseUser.app_metadata?.provider,
+  console.log('[Auth] Test login attempt for email:', email);
+
+  // Find user by email
+  const user = await prisma.user.findUnique({
+    where: { email },
   });
 
-  // Check if user exists in our database
-  let user = await prisma.user.findUnique({
-    where: { id: supabaseUser.id },
-  });
-
-  // Create user if doesn't exist (first-time login)
   if (!user) {
-    console.log('[Auth] Creating new user in database');
-    user = await prisma.user.create({
-      data: {
-        id: supabaseUser.id,
-        email: supabaseUser.email,
-        name: supabaseUser.user_metadata?.full_name || 
-              supabaseUser.user_metadata?.name || 
-              supabaseUser.email?.split('@')[0] || 
-              null,
-      },
-    });
-    console.log('[Auth] User created successfully');
-  } else {
-    console.log('[Auth] Existing user found');
+    throw createError('Invalid credentials', 401);
   }
 
-  // Generate our JWT token
+  // Check password (for test user, we'll use a simple comparison)
+  // In production, you'd use bcrypt to compare hashed passwords
+  const isValidPassword = password === 'testest' && email === 'test';
+  
+  if (!isValidPassword) {
+    throw createError('Invalid credentials', 401);
+  }
+
+  console.log('[Auth] Login successful for user:', user.email);
+
+  // Generate JWT token
   const token = generateToken(user.id);
 
   res.json({
@@ -57,7 +49,7 @@ router.post('/google', asyncHandler(async (req: Request, res: Response) => {
       },
       token,
     },
-    message: 'Google sign in successful',
+    message: 'Login successful',
   });
 }));
 

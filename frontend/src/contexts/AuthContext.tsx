@@ -1,15 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, AuthResponse } from '../types';
-import { api } from '../lib/api';
+import { createClient } from '@supabase/supabase-js';
+import { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
-  loginWithGoogle: (credential: string) => Promise<void>;
-  logout: () => void;
+  session: Session | null;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
   loading: boolean;
-  setUser: (user: User | null) => void;
-  setToken: (token: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,64 +20,66 @@ export const useAuth = () => {
   return context;
 };
 
+// Initialize Supabase client
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL!;
+const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY!;
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      const storedToken = localStorage.getItem('token');
-      
-      if (storedToken) {
-        try {
-          // Verify token with backend
-          const response = await api.get('/auth?action=me');
-          if (response.data.success) {
-            setToken(storedToken);
-            setUser(response.data.data.user);
-          } else {
-            // Token is invalid, clear it
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-          }
-        } catch (error) {
-          // Token is invalid or expired, clear it
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-        }
-      }
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
       setLoading(false);
-    };
+    });
 
-    initializeAuth();
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-
-  const loginWithGoogle = async (credential: string) => {
-    const response = await api.post<AuthResponse>('/auth?action=google', { credential });
-    
-    if (response.data.success) {
-      const { user, token } = response.data.data;
-      setUser(user);
-      setToken(token);
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-    } else {
-      throw new Error(response.data.message || 'Google login failed');
+  const signInWithGoogle = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error signing in with Google:', error);
+      throw error;
     }
   };
 
-
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const signOut = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error signing out:', error);
+      throw error;
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loginWithGoogle, logout, loading, setUser, setToken }}>
+    <AuthContext.Provider value={{ user, session, signInWithGoogle, signOut, loading }}>
       {children}
     </AuthContext.Provider>
   );

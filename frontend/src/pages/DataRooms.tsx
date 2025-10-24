@@ -2,32 +2,51 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Plus, FolderOpen, Trash2 } from 'lucide-react';
-import { DataRoom, PaginatedResponse } from '../types';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/Dialog';
 import { Input } from '../components/ui/Input';
 import { formatDate } from '../lib/utils';
-import { api } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 export const DataRooms: React.FC = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newDataRoomName, setNewDataRoomName] = useState('');
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
-  const { data: dataRoomsData, isLoading } = useQuery<PaginatedResponse<DataRoom>>({
+  const { data: dataRooms, isLoading } = useQuery({
     queryKey: ['dataRooms'],
     queryFn: async () => {
-      const response = await api.get('/data-rooms');
-      return response.data;
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from('data_rooms')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
     },
   });
 
-
   const createMutation = useMutation({
     mutationFn: async (name: string) => {
-      const response = await api.post('/data-rooms', { name });
-      return response.data.data;
+      if (!user) throw new Error('User not authenticated');
+      
+      const { data, error } = await supabase
+        .from('data_rooms')
+        .insert({
+          name,
+          user_id: user.id,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dataRooms'] });
@@ -38,7 +57,15 @@ export const DataRooms: React.FC = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await api.delete(`/data-rooms/${id}`);
+      if (!user) throw new Error('User not authenticated');
+      
+      const { error } = await supabase
+        .from('data_rooms')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
       return { id };
     },
     onSuccess: () => {
@@ -88,9 +115,9 @@ export const DataRooms: React.FC = () => {
             </Card>
           ))}
         </div>
-      ) : dataRoomsData?.data && dataRoomsData.data.length > 0 ? (
+      ) : dataRooms && dataRooms.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {dataRoomsData.data.map((dataRoom) => (
+          {dataRooms.map((dataRoom) => (
             <Card key={dataRoom.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -98,13 +125,13 @@ export const DataRooms: React.FC = () => {
                   {dataRoom.name}
                 </CardTitle>
                 <CardDescription>
-                  Created {formatDate(dataRoom.createdAt)}
+                  Created {formatDate(dataRoom.created_at)}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">
-                    {dataRoom._count?.folders || 0} folder{dataRoom._count?.folders !== 1 ? 's' : ''}
+                    0 folders
                   </span>
                   <div className="flex gap-2">
                     <Link to={`/data-rooms/${dataRoom.id}`}>

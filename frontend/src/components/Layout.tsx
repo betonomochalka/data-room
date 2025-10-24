@@ -5,11 +5,11 @@ import { Button } from './ui/Button';
 import { FolderOpen, LogOut, User } from 'lucide-react';
 
 export const Layout: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
     navigate('/login');
   };
 
@@ -28,7 +28,7 @@ export const Layout: React.FC = () => {
                 <>
                   <div className="flex items-center gap-2 text-sm">
                     <User className="h-4 w-4" />
-                    <span>{user.name || user.email}</span>
+                    <span>{user.user_metadata?.full_name || user.email}</span>
                   </div>
                   <Button variant="outline" size="sm" onClick={handleLogout}>
                     <LogOut className="h-4 w-4 mr-2" />

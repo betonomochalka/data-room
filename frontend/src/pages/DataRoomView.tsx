@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Plus, Folder, FileText, Trash2, Edit, Upload, Search } from 'lucide-react';
 import { DataRoom, Folder as FolderType, File as FileType, ApiResponse } from '../types';
 import { Button } from '../components/ui/Button';
@@ -9,17 +9,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from '../components/ui/Input';
 import { FileTree } from '../components/FileTree';
 import { formatDate, formatBytes } from '../lib/utils';
+import { api } from '../lib/api';
 
-// Global file storage declaration
-declare global {
-  interface Window {
-    fileStorage?: Map<string, string>;
-  }
-}
 
 export const DataRoomView: React.FC = () => {
   const { id, folderId } = useParams<{ id: string; folderId?: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [isCreateFolderDialogOpen, setIsCreateFolderDialogOpen] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
@@ -30,217 +26,156 @@ export const DataRoomView: React.FC = () => {
   const [uploadFileName, setUploadFileName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Initialize state with localStorage data or defaults
-  const getInitialFolders = (): FolderType[] => {
-    const saved = localStorage.getItem(`dataRoom-${id}-folders`);
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return []; // Start with empty folders
-  };
 
-  const getInitialFiles = (): FileType[] => {
-    const saved = localStorage.getItem(`dataRoom-${id}-files`);
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return []; // Start with empty files
-  };
 
-  const [tempFolders, setTempFolders] = useState<FolderType[]>(getInitialFolders);
-  const [tempFiles, setTempFiles] = useState<FileType[]>(getInitialFiles);
-
-  // Calculate folder counts
-  const calculateFolderCounts = (folders: FolderType[], files: FileType[]) => {
-    return folders.map(folder => ({
-      ...folder,
-      _count: {
-        files: files.filter(file => file.folderId === folder.id).length,
-        children: folders.filter(f => f.parentId === folder.id).length
-      }
-    }));
-  };
-
-  // Combined save function for both folders and files
-  const saveFoldersAndFiles = (folders: FolderType[], files: FileType[]) => {
-    const foldersWithCounts = calculateFolderCounts(folders, files);
-    localStorage.setItem(`dataRoom-${id}-folders`, JSON.stringify(foldersWithCounts));
-    localStorage.setItem(`dataRoom-${id}-files`, JSON.stringify(files));
-    setTempFolders(foldersWithCounts);
-    setTempFiles(files);
-  };
-
-  // Temporary bypass for data room fetching
+  // Fetch data room
   const { data: dataRoomData } = useQuery<ApiResponse<DataRoom>>({
     queryKey: ['dataRoom', id],
     queryFn: async () => {
-      console.log('Temporary bypass - returning mock data room');
-      return {
-        success: true,
-        data: {
-          id: id || 'temp-room',
-          name: 'Sample Data Room',
-          ownerId: 'temp-user-id',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          folders: tempFolders
-        }
-      };
+      const response = await api.get(`/data-rooms/${id}`);
+      return response.data;
     },
-    enabled: !folderId,
+    enabled: !!id && !folderId,
   });
 
-  // Temporary bypass for folder fetching
+  // Fetch folder contents
   const { data: folderData } = useQuery({
     queryKey: ['folder', folderId],
     queryFn: async () => {
-      console.log('Temporary bypass - returning mock folder data');
-      return {
-        success: true,
-        data: {
-          folder: { id: folderId, name: 'Sample Folder' },
-          children: tempFolders,
-          files: tempFiles
-        }
-      };
+      const response = await api.get(`/folders/${folderId}`);
+      return response.data;
     },
     enabled: !!folderId,
   });
 
+  // Fetch folders for data room
+  const { data: foldersData } = useQuery({
+    queryKey: ['folders', id],
+    queryFn: async () => {
+      const response = await api.get(`/data-rooms/${id}/folders`);
+      return response.data;
+    },
+    enabled: !!id,
+  });
+
+  // Fetch files for data room or folder
+  const { data: filesData } = useQuery({
+    queryKey: ['files', id, folderId],
+    queryFn: async () => {
+      const response = await api.get(folderId ? `/folders/${folderId}/files` : `/data-rooms/${id}/files`);
+      return response.data;
+    },
+    enabled: !!id,
+  });
+
   const createFolderMutation = useMutation({
     mutationFn: async (name: string) => {
-      console.log('Temporary bypass - creating mock folder');
-      const newFolder: FolderType = {
-        id: `temp-folder-${Date.now()}`,
-        name: name,
-        dataRoomId: id || 'temp-room',
+      const response = await api.post('/folders', {
+        name,
+        dataRoomId: id,
         parentId: folderId || null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        _count: { files: 0, children: 0 }
-      };
-      const updatedFolders = [...tempFolders, newFolder];
-      saveFoldersAndFiles(updatedFolders, tempFiles);
-      return newFolder;
+      });
+      return response.data.data;
     },
     onSuccess: () => {
-      console.log('Temporary bypass - folder created successfully');
       setIsCreateFolderDialogOpen(false);
       setNewFolderName('');
+      // Invalidate relevant queries
+      if (folderId) {
+        queryClient.invalidateQueries({ queryKey: ['folder', folderId] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['folders', id] });
+      }
     },
     onError: (error: any) => {
-      console.error('Temporary bypass - folder creation error:', error);
+      console.error('Folder creation error:', error);
       alert(`Failed to create folder: ${error.message}`);
     },
   });
 
   const deleteFolderMutation = useMutation({
     mutationFn: async (folderIdToDelete: string) => {
-      console.log('Temporary bypass - deleting mock folder');
-      const updatedFolders = tempFolders.filter(folder => folder.id !== folderIdToDelete);
-      saveFoldersAndFiles(updatedFolders, tempFiles);
+      await api.delete(`/folders/${folderIdToDelete}`);
       return { id: folderIdToDelete };
     },
     onSuccess: () => {
-      console.log('Temporary bypass - folder deleted successfully');
+      // Invalidate relevant queries
+      if (folderId) {
+        queryClient.invalidateQueries({ queryKey: ['folder', folderId] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['folders', id] });
+      }
     },
   });
 
   const deleteFileMutation = useMutation({
     mutationFn: async (fileId: string) => {
-      console.log('Temporary bypass - deleting mock file');
-      const updatedFiles = tempFiles.filter(file => file.id !== fileId);
-      saveFoldersAndFiles(tempFolders, updatedFiles);
+      await api.delete(`/files/${fileId}`);
       return { id: fileId };
     },
     onSuccess: () => {
-      console.log('Temporary bypass - file deleted successfully');
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ['files', id, folderId] });
     },
   });
 
   const renameFolderMutation = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      console.log('Temporary bypass - renaming mock folder');
-      const updatedFolders = tempFolders.map(folder => 
-        folder.id === id ? { ...folder, name, updatedAt: new Date().toISOString() } : folder
-      );
-      saveFoldersAndFiles(updatedFolders, tempFiles);
-      return { id, name };
+      const response = await api.patch(`/folders/${id}`, { name });
+      return response.data.data;
     },
     onSuccess: () => {
-      console.log('Temporary bypass - folder renamed successfully');
       setIsRenameDialogOpen(false);
       setRenameItem(null);
       setNewName('');
+      // Invalidate relevant queries
+      if (folderId) {
+        queryClient.invalidateQueries({ queryKey: ['folder', folderId] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['folders', id] });
+      }
     },
   });
 
   const renameFileMutation = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      console.log('Temporary bypass - renaming mock file');
-      const updatedFiles = tempFiles.map(file => 
-        file.id === id ? { ...file, name, updatedAt: new Date().toISOString() } : file
-      );
-      saveFoldersAndFiles(tempFolders, updatedFiles);
-      return { id, name };
+      const response = await api.patch(`/files/${id}`, { name });
+      return response.data.data;
     },
     onSuccess: () => {
-      console.log('Temporary bypass - file renamed successfully');
       setIsRenameDialogOpen(false);
       setRenameItem(null);
       setNewName('');
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ['files', id, folderId] });
     },
   });
 
-  // In-memory file storage (survives page refresh within same session)
-  const getFileStorage = () => {
-    if (!window.fileStorage) {
-      window.fileStorage = new Map();
-    }
-    return window.fileStorage;
-  };
 
   const uploadFileMutation = useMutation({
     mutationFn: async ({ file, name, folderId }: { file: File; name: string; folderId: string }) => {
-      console.log('Temporary bypass - creating mock file');
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('name', name);
+      formData.append('folderId', folderId);
       
-      // Create a blob URL that persists in memory
-      const blobUrl = URL.createObjectURL(file);
+      const response = await api.post('/files/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       
-      const newFile: FileType = {
-        id: `temp-file-${Date.now()}`,
-        name: name,
-        fileType: file.type || 'application/pdf',
-        size: file.size,
-        blobUrl: blobUrl, // Store as blob URL
-        folderId: folderId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      // Store file metadata only in localStorage (without the actual file data)
-      const fileMetadata: FileType = {
-        ...newFile,
-        blobUrl: '' // Empty string instead of null for localStorage
-      };
-      
-      const updatedFiles = [...tempFiles, fileMetadata];
-      saveFoldersAndFiles(tempFolders, updatedFiles);
-      
-      // Store the actual file blob URL in memory
-      const fileStorage = getFileStorage();
-      fileStorage.set(newFile.id, blobUrl);
-      
-      return newFile;
+      return response.data.data;
     },
     onSuccess: () => {
-      console.log('Temporary bypass - file uploaded successfully');
       setIsUploadDialogOpen(false);
       setSelectedFile(null);
       setUploadFileName('');
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ['files', id, folderId] });
     },
     onError: (error: any) => {
-      console.error('Temporary bypass - file upload error:', error);
+      console.error('File upload error:', error);
       alert(`Upload failed: ${error.message}`);
     },
   });
@@ -250,20 +185,20 @@ export const DataRoomView: React.FC = () => {
     if (folderId) {
       // Show contents of specific folder
       return {
-        folders: tempFolders.filter(folder => folder.parentId === folderId),
-        files: tempFiles.filter(file => file.folderId === folderId)
+        folders: folderData?.data?.children || [],
+        files: folderData?.data?.files || []
       };
     } else {
       // Show root level contents (root folders and files)
       return {
-        folders: tempFolders.filter(folder => !folder.parentId),
-        files: tempFiles.filter(file => !file.folderId || !tempFolders.find(f => f.id === file.folderId))
+        folders: foldersData?.data || [],
+        files: filesData?.data || []
       };
     }
   };
 
   const { folders, files } = getCurrentFolderContents();
-  const isLoading = false; // Always false since we're using localStorage
+  const isLoading = !folderId ? (foldersData?.isLoading || filesData?.isLoading) : (folderData?.isLoading || filesData?.isLoading);
 
   const handleCreateFolder = (e: React.FormEvent) => {
     e.preventDefault();
@@ -280,7 +215,7 @@ export const DataRoomView: React.FC = () => {
       
       if (!targetFolderId) {
         // At root level - create a default folder if none exists
-        const rootFolders = tempFolders.filter(folder => !folder.parentId);
+        const rootFolders = foldersData?.data || [];
         if (rootFolders.length === 0) {
           alert('Please create a folder first before uploading files');
           return;
@@ -288,7 +223,9 @@ export const DataRoomView: React.FC = () => {
         targetFolderId = rootFolders[0].id;
       }
       
-      uploadFileMutation.mutate({ file: selectedFile, name: uploadFileName, folderId: targetFolderId });
+      if (targetFolderId) {
+        uploadFileMutation.mutate({ file: selectedFile, name: uploadFileName, folderId: targetFolderId });
+      }
     }
   };
 
@@ -310,14 +247,11 @@ export const DataRoomView: React.FC = () => {
     }
 
     const query = searchQuery.toLowerCase();
-    const allFolders = tempFolders;
-    const allFiles = tempFiles;
-
-    // Find matching folders and files
-    const matchingFolders = allFolders.filter(folder => 
+    // For now, search only in current view since we don't have a global search API
+    const matchingFolders = folders.filter((folder: FolderType) => 
       folder.name.toLowerCase().includes(query)
     );
-    const matchingFiles = allFiles.filter(file => 
+    const matchingFiles = files.filter((file: FileType) => 
       file.name.toLowerCase().includes(query)
     );
 
@@ -331,14 +265,10 @@ export const DataRoomView: React.FC = () => {
   };
 
   const handleFileClick = (fileId: string) => {
-    const file = tempFiles.find(f => f.id === fileId);
+    const file = files.find((f: FileType) => f.id === fileId);
     if (file) {
-      // Get blob URL from memory storage
-      const fileStorage = getFileStorage();
-      const blobUrl = fileStorage.get(fileId);
-      
-      if (blobUrl) {
-        // Create a proper PDF viewer URL
+      // Open file in new tab using the blobUrl from the database
+      if (file.blobUrl) {
         if (file.fileType === 'application/pdf') {
           // Open PDF in new tab with proper viewer
           const pdfWindow = window.open('', '_blank');
@@ -361,7 +291,7 @@ export const DataRoomView: React.FC = () => {
                       <h3>${file.name}</h3>
                     </div>
                     <div class="viewer">
-                      <iframe src="${blobUrl}" type="application/pdf"></iframe>
+                      <iframe src="${file.blobUrl}" type="application/pdf"></iframe>
                     </div>
                   </div>
                 </body>
@@ -372,7 +302,7 @@ export const DataRoomView: React.FC = () => {
         } else {
           // For other file types, create a download link
           const link = document.createElement('a');
-          link.href = blobUrl;
+          link.href = file.blobUrl;
           link.download = file.name;
           link.target = '_blank';
           document.body.appendChild(link);
@@ -389,8 +319,8 @@ export const DataRoomView: React.FC = () => {
     <div className="flex h-screen">
       {/* File Tree Sidebar */}
       <FileTree
-        folders={tempFolders}
-        files={tempFiles}
+        folders={foldersData?.data || []}
+        files={filesData?.data || []}
         onFolderClick={handleFolderClick}
         onFileClick={handleFileClick}
         currentPath={folderId}
@@ -500,9 +430,9 @@ export const DataRoomView: React.FC = () => {
             <div>
               <h2 className="text-xl font-semibold mb-4">Files</h2>
               <div className="grid grid-cols-1 gap-2">
-                {filteredFiles.map((file: FileType) => {
-                  const fileFolder = tempFolders.find(f => f.id === file.folderId);
-                  return (
+                    {filteredFiles.map((file: FileType) => {
+                      const fileFolder = (foldersData?.data || []).find((f: FolderType) => f.id === file.folderId);
+                      return (
                     <Card key={file.id} className="hover:shadow-md transition-shadow">
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">

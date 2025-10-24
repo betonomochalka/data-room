@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '../types';
+import { User, AuthResponse } from '../types';
+import { api } from '../lib/api';
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<void>;
   signup: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
@@ -26,52 +28,73 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
+    const initializeAuth = async () => {
+      const storedToken = localStorage.getItem('token');
+      
+      if (storedToken) {
+        try {
+          // Verify token with backend
+          const response = await api.get('/auth/me');
+          if (response.data.success) {
+            setToken(storedToken);
+            setUser(response.data.data.user);
+          } else {
+            // Token is invalid, clear it
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+          }
+        } catch (error) {
+          // Token is invalid or expired, clear it
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+      }
+      setLoading(false);
+    };
 
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    initializeAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
-    // Temporary bypass - simulate successful login
-    console.log('Temporary login bypass - backend not accessible');
+    const response = await api.post<AuthResponse>('/auth/login', { email, password });
     
-    const userData = {
-      id: 'temp-user-id',
-      email: email,
-      name: 'Test User',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    const authToken = 'temp-token-123';
+    if (response.data.success) {
+      const { user, token } = response.data.data;
+      setUser(user);
+      setToken(token);
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+    } else {
+      throw new Error(response.data.message || 'Login failed');
+    }
+  };
 
-    setUser(userData);
-    setToken(authToken);
-    localStorage.setItem('token', authToken);
-    localStorage.setItem('user', JSON.stringify(userData));
+  const loginWithGoogle = async (credential: string) => {
+    const response = await api.post<AuthResponse>('/auth/google', { credential });
+    
+    if (response.data.success) {
+      const { user, token } = response.data.data;
+      setUser(user);
+      setToken(token);
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+    } else {
+      throw new Error(response.data.message || 'Google login failed');
+    }
   };
 
   const signup = async (email: string, password: string, name?: string) => {
-    // Temporary bypass - simulate successful signup
-    console.log('Temporary signup bypass - backend not accessible');
+    const response = await api.post<AuthResponse>('/auth/signup', { email, password, name });
     
-    const userData = {
-      id: 'temp-user-id',
-      email: email,
-      name: name || 'Test User',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    const authToken = 'temp-token-123';
-
-    setUser(userData);
-    setToken(authToken);
-    localStorage.setItem('token', authToken);
-    localStorage.setItem('user', JSON.stringify(userData));
+    if (response.data.success) {
+      const { user, token } = response.data.data;
+      setUser(user);
+      setToken(token);
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+    } else {
+      throw new Error(response.data.message || 'Signup failed');
+    }
   };
 
   const logout = () => {
@@ -82,7 +105,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, signup, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, loginWithGoogle, signup, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

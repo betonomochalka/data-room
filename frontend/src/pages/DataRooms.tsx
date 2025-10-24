@@ -8,78 +8,26 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/Dialog';
 import { Input } from '../components/ui/Input';
 import { formatDate } from '../lib/utils';
+import { api } from '../lib/api';
 
 export const DataRooms: React.FC = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newDataRoomName, setNewDataRoomName] = useState('');
-  const getInitialDataRooms = (): DataRoom[] => {
-    const saved = localStorage.getItem('user-data-rooms');
-    if (saved) {
-      const dataRooms = JSON.parse(saved);
-      return dataRooms.map((dataRoom: DataRoom) => {
-        const folders = JSON.parse(localStorage.getItem(`dataRoom-${dataRoom.id}-folders`) || '[]');
-        return {
-          ...dataRoom,
-          _count: { folders: folders.length }
-        };
-      });
-    }
-    return []; // Start with empty data rooms
-  };
-
-  const [tempDataRooms, setTempDataRooms] = useState<DataRoom[]>(getInitialDataRooms);
-  // const [deleteId, setDeleteId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: dataRoomsData, isLoading } = useQuery<PaginatedResponse<DataRoom>>({
     queryKey: ['dataRooms'],
     queryFn: async () => {
-      // Temporary bypass - return mock data
-      console.log('Temporary bypass - returning mock data rooms');
-      return {
-        success: true,
-        data: tempDataRooms,
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: tempDataRooms.length,
-          totalPages: 1
-        }
-      };
+      const response = await api.get('/data-rooms');
+      return response.data;
     },
   });
 
-  const calculateDataRoomCounts = (dataRooms: DataRoom[]) => {
-    return dataRooms.map(dataRoom => {
-      const folders = JSON.parse(localStorage.getItem(`dataRoom-${dataRoom.id}-folders`) || '[]');
-      return {
-        ...dataRoom,
-        _count: { folders: folders.length }
-      };
-    });
-  };
-
-  const saveDataRooms = (dataRooms: DataRoom[]) => {
-    const dataRoomsWithCounts = calculateDataRoomCounts(dataRooms);
-    localStorage.setItem('user-data-rooms', JSON.stringify(dataRoomsWithCounts));
-    setTempDataRooms(dataRoomsWithCounts);
-  };
 
   const createMutation = useMutation({
     mutationFn: async (name: string) => {
-      // Temporary bypass - create mock data room
-      console.log('Temporary bypass - creating mock data room');
-      const newDataRoom: DataRoom = {
-        id: `temp-${Date.now()}`,
-        name: name,
-        ownerId: 'temp-user-id',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        _count: { folders: 0 }
-      };
-      const updatedDataRooms = [...tempDataRooms, newDataRoom];
-      saveDataRooms(updatedDataRooms);
-      return newDataRoom;
+      const response = await api.post('/data-rooms', { name });
+      return response.data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dataRooms'] });
@@ -90,15 +38,11 @@ export const DataRooms: React.FC = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Temporary bypass - delete mock data room
-      console.log('Temporary bypass - deleting mock data room');
-      const updatedDataRooms = tempDataRooms.filter(room => room.id !== id);
-      saveDataRooms(updatedDataRooms);
+      await api.delete(`/data-rooms/${id}`);
       return { id };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dataRooms'] });
-      // setDeleteId(null); // Commented out since setDeleteId is not used
     },
   });
 

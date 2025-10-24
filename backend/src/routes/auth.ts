@@ -8,6 +8,66 @@ import jwt from 'jsonwebtoken';
 const router = Router();
 const prisma = new PrismaClient();
 
+// Google OAuth authentication
+router.post('/google', asyncHandler(async (req: Request, res: Response) => {
+  const { credential } = req.body;
+
+  if (!credential) {
+    throw createError('Google credential is required', 400);
+  }
+
+  try {
+    // Verify the Google ID token
+    const { OAuth2Client } = require('google-auth-library');
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload) {
+      throw createError('Invalid Google token', 401);
+    }
+
+    const { email, name, sub: googleId } = payload;
+
+    // Find or create user
+    let user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email,
+          name,
+        },
+      });
+    }
+
+    // Generate JWT token
+    const token = generateToken(user.id);
+
+    res.json({
+      success: true,
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        },
+        token,
+      },
+      message: 'Login successful',
+    });
+  } catch (error) {
+    console.error('Google OAuth error:', error);
+    throw createError('Authentication failed', 401);
+  }
+}));
+
 // Simple test authentication
 router.post('/login', asyncHandler(async (req: Request, res: Response) => {
   const { email, password } = req.body;

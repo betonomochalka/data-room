@@ -52,6 +52,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.8.1",
+    "@types/react-query": "^1.2.9",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.6"
   }

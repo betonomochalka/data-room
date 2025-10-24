@@ -19,23 +19,32 @@ export const DataRooms: React.FC = () => {
   const { data: dataRooms, isLoading } = useQuery({
     queryKey: ['dataRooms'],
     queryFn: async () => {
-      if (!user) return [];
+      if (!user) {
+        console.log('🔍 No user, skipping data rooms fetch');
+        return [];
+      }
       
+      console.log('🔍 Fetching data rooms for user:', user.id);
       const { data, error } = await supabase
         .from('data_rooms')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('🔍 Error fetching data rooms:', error);
+        throw error;
+      }
       return data || [];
     },
+    enabled: !!user, // Only run when user is available
   });
 
   const createMutation = useMutation({
     mutationFn: async (name: string) => {
       if (!user) throw new Error('User not authenticated');
       
+      console.log('🔍 Creating data room:', { name, user_id: user.id });
       const { data, error } = await supabase
         .from('data_rooms')
         .insert({
@@ -45,7 +54,10 @@ export const DataRooms: React.FC = () => {
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('🔍 Error creating data room:', error);
+        throw error;
+      }
       return data;
     },
     onSuccess: () => {

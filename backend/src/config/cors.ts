@@ -6,7 +6,6 @@ export const corsConfig = {
     : ['*'],
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
-  credentials: true
 };
 
 // Simplified CORS headers function for Vercel API functions
@@ -15,8 +14,6 @@ export const setCorsHeaders = (res: any, origin?: string) => {
   // Allow specific frontend domain
   const allowedOrigins = [
     'https://data-room-196e.vercel.app',
-    'http://localhost:3000',
-    'http://localhost:3001'
   ];
   
   const requestOrigin = origin || '';
@@ -25,7 +22,6 @@ export const setCorsHeaders = (res: any, origin?: string) => {
   res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
   res.setHeader('Access-Control-Allow-Methods', corsConfig.methods.join(', '));
   res.setHeader('Access-Control-Allow-Headers', corsConfig.allowedHeaders.join(', '));
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
 };
 
 // Handle preflight requests - Simplified for Vercel

@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, AuthResponse } from '../types';
-import api from '../lib/api';
 
 interface AuthContextType {
   user: User | null;
@@ -44,7 +43,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const userData = {
       id: 'temp-user-id',
       email: email,
-      name: 'Test User'
+      name: 'Test User',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     const authToken = 'temp-token-123';
 

@@ -1,19 +1,9 @@
-// Centralized CORS configuration
+// Centralized CORS configuration - Vercel only
 export const corsConfig = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? [
-        'https://data-room-196e.vercel.app',
-        'https://data-room-seven.vercel.app'
-      ]
-    : [
-        'http://localhost:3000',
-        'http://localhost:3001',
-        'https://data-room-196e.vercel.app',
-        'https://data-room-seven.vercel.app'
-      ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  origin: [
+    'https://data-room-196e.vercel.app',
+    'https://data-room-seven.vercel.app'
+  ]
 };
 
 // Function to set CORS headers for Vercel API functions
@@ -24,6 +14,7 @@ export const setCorsHeaders = (res: any, origin?: string) => {
   const allowedOrigin = corsConfig.origin.includes(origin || '') ? origin : '*';
   res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
   
-  res.setHeader('Access-Control-Allow-Methods', corsConfig.methods.join(', '));
-  res.setHeader('Access-Control-Allow-Headers', corsConfig.allowedHeaders.join(', '));
+  // Use default CORS headers
+  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 };

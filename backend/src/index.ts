@@ -31,7 +31,7 @@ app.use(helmet());
 // Manual CORS headers as fallback
 app.use(
   cors({
-    origin: '*'
+    origin: 'https://data-room-196e.vercel.app',
   })
 );
 app.use(morgan('combined'));

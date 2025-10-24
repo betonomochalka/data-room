@@ -58,7 +58,13 @@ export const Login: React.FC = () => {
     try {
       console.log('🚀 Initializing Google Auth with client ID:', clientId);
       
-      // @ts-ignore
+      if (!window.google?.accounts?.id) {
+        console.error('❌ Google accounts not available');
+        setError('Google authentication not available');
+        setLoading(false);
+        return;
+      }
+
       window.google.accounts.id.initialize({
         client_id: clientId,
         callback: async (response: any) => {
@@ -82,7 +88,6 @@ export const Login: React.FC = () => {
         },
       });
 
-      // @ts-ignore
       window.google.accounts.id.prompt();
       console.log('✅ Google prompt triggered');
     } catch (err) {

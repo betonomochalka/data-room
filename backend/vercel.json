@@ -6,9 +6,6 @@
             "use": "@vercel/node"
         }
     ],
-    "ignore": [
-        "src/**/*"
-    ],
     "routes": [
         {
             "src": "/api/(.*)",

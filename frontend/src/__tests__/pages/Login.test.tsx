@@ -43,7 +43,9 @@ describe('Login Page', () => {
     
     const signupLink = screen.getByText(/sign up/i);
     expect(signupLink).toBeInTheDocument();
-    expect(signupLink.closest('a')).toHaveAttribute('href', '/signup');
+    // Use Testing Library query instead of direct DOM access
+    const signupElement = screen.getByRole('link', { name: /sign up/i });
+    expect(signupElement).toHaveAttribute('href', '/signup');
   });
 
   it('handles form submission', async () => {

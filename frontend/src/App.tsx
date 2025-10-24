@@ -6,6 +6,7 @@ import { Layout } from './components/Layout';
 import { PrivateRoute } from './components/PrivateRoute';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
+import { AuthCallback } from './pages/AuthCallback';
 import { DataRooms } from './pages/DataRooms';
 import { DataRoomView } from './pages/DataRoomView';
 
@@ -26,6 +27,7 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             
             <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
               <Route path="/" element={<DataRooms />} />

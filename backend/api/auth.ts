@@ -33,29 +33,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return;
       }
 
-      const { credential } = req.body;
+      const { credential, code, redirect_uri } = req.body;
 
-      if (!credential) {
-        res.status(400).json({ error: 'Google credential is required' });
+      let email: string;
+      let name: string | undefined;
+
+      if (credential) {
+        // Handle ID token (One Tap flow)
+        const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+        
+        const ticket = await client.verifyIdToken({
+          idToken: credential,
+          audience: process.env.GOOGLE_CLIENT_ID,
+        });
+
+        const payload = ticket.getPayload();
+        if (!payload) {
+          res.status(401).json({ error: 'Invalid Google token' });
+          return;
+        }
+
+        email = payload.email!;
+        name = payload.name;
+      } else if (code) {
+        // Handle authorization code (OAuth redirect flow)
+        const client = new OAuth2Client(
+          process.env.GOOGLE_CLIENT_ID,
+          process.env.GOOGLE_CLIENT_SECRET,
+          redirect_uri || `${process.env.FRONTEND_URL}/auth/callback`
+        );
+
+        const { tokens } = await client.getToken(code);
+        client.setCredentials(tokens);
+
+        const ticket = await client.verifyIdToken({
+          idToken: tokens.id_token!,
+          audience: process.env.GOOGLE_CLIENT_ID,
+        });
+
+        const payload = ticket.getPayload();
+        if (!payload) {
+          res.status(401).json({ error: 'Invalid Google token' });
+          return;
+        }
+
+        email = payload.email!;
+        name = payload.name;
+      } else {
+        res.status(400).json({ error: 'Google credential or code is required' });
         return;
       }
-
-      // Verify the Google ID token
-      // OAuth2Client is now imported at the top
-      const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-      
-      const ticket = await client.verifyIdToken({
-        idToken: credential,
-        audience: process.env.GOOGLE_CLIENT_ID,
-      });
-
-      const payload = ticket.getPayload();
-      if (!payload) {
-        res.status(401).json({ error: 'Invalid Google token' });
-        return;
-      }
-
-      const { email, name, sub: googleId } = payload;
 
       // Find or create user
       let user = await prisma.user.findUnique({

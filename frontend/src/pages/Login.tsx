@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
-import { api } from '../lib/api';
 
 export const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
 
   const handleGoogleLogin = async () => {
@@ -24,29 +21,26 @@ export const Login: React.FC = () => {
       }
 
       console.log('🔑 Google Client ID:', clientId);
+      console.log('🚀 Starting OAuth redirect flow...');
 
-      // Check if Google script is already loaded
-      if (window.google?.accounts?.id) {
-        initializeGoogleAuth(clientId);
-      } else {
-        // Load Google Identity Services
-        const script = document.createElement('script');
-        script.src = 'https://accounts.google.com/gsi/client';
-        script.async = true;
-        script.defer = true;
-        document.head.appendChild(script);
+      // Use OAuth redirect flow instead of One Tap
+      const redirectUri = encodeURIComponent(window.location.origin + '/auth/callback');
+      const scope = encodeURIComponent('openid email profile');
+      const responseType = 'code';
+      
+      const authUrl = `https://accounts.google.com/oauth/authorize?` +
+        `client_id=${clientId}&` +
+        `redirect_uri=${redirectUri}&` +
+        `response_type=${responseType}&` +
+        `scope=${scope}&` +
+        `access_type=offline&` +
+        `prompt=select_account`;
 
-        script.onload = () => {
-          console.log('📜 Google script loaded');
-          initializeGoogleAuth(clientId);
-        };
-
-        script.onerror = () => {
-          console.error('❌ Failed to load Google script');
-          setError('Failed to load Google authentication');
-          setLoading(false);
-        };
-      }
+      console.log('🔗 Redirecting to:', authUrl);
+      
+      // Redirect to Google OAuth
+      window.location.href = authUrl;
+      
     } catch (err: any) {
       console.error('❌ Google login error:', err);
       setError('Failed to initialize Google login');
@@ -54,78 +48,7 @@ export const Login: React.FC = () => {
     }
   };
 
-  const initializeGoogleAuth = (clientId: string) => {
-    try {
-      console.log('🚀 Initializing Google Auth with client ID:', clientId);
-      
-      if (!window.google?.accounts?.id) {
-        console.error('❌ Google accounts not available');
-        setError('Google authentication not available');
-        setLoading(false);
-        return;
-      }
-
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: async (response: any) => {
-          try {
-            console.log('📝 Google callback received');
-            const result = await api.post('/auth?action=google', {
-              credential: response.credential,
-            });
-
-            if (result.data.success) {
-              localStorage.setItem('token', result.data.data.token);
-              localStorage.setItem('user', JSON.stringify(result.data.data.user));
-              navigate('/');
-            }
-          } catch (err: any) {
-            console.error('❌ API call failed:', err);
-            setError('Google login failed');
-          } finally {
-            setLoading(false);
-          }
-        },
-      });
-
-      // Try One Tap first, then fallback to prompt
-      try {
-        // @ts-ignore
-        window.google.accounts.id.prompt((notification: any) => {
-          console.log('🔔 Google One Tap notification:', notification);
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            console.log('⚠️ One Tap not displayed, trying popup...');
-            // Fallback to popup
-            if (window.google?.accounts?.id) {
-              window.google.accounts.id.prompt();
-            }
-          }
-        });
-        console.log('✅ Google One Tap triggered');
-      } catch (err) {
-        console.log('⚠️ One Tap failed, trying regular prompt...');
-        if (window.google?.accounts?.id) {
-          window.google.accounts.id.prompt();
-        }
-        console.log('✅ Google prompt triggered');
-      }
-      
-      // Add a timeout to check if popup appeared
-      setTimeout(() => {
-        console.log('🔍 Checking if popup appeared after 2 seconds...');
-        // Check if any new windows were opened
-        if (window.opener || window.parent !== window) {
-          console.log('✅ Popup window detected');
-        } else {
-          console.log('❌ No popup window detected - this might be the issue');
-        }
-      }, 2000);
-    } catch (err) {
-      console.error('❌ Google auth initialization failed:', err);
-      setError('Failed to initialize Google authentication');
-      setLoading(false);
-    }
-  };
+  // Removed initializeGoogleAuth function as we're now using OAuth redirect flow
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
@@ -170,45 +93,6 @@ export const Login: React.FC = () => {
                   Continue with Google
                 </Button>
 
-                <Button 
-                  type="button"
-                  variant="outline"
-                  className="w-full mt-2"
-                  onClick={() => {
-                    console.log('🔧 Force Google One Tap display');
-                    if (window.google?.accounts?.id) {
-                      // Force display One Tap even if user opted out
-                      window.google.accounts.id.prompt();
-                      console.log('✅ Forced One Tap display');
-                    }
-                  }}
-                >
-                  🔧 Force Google One Tap
-                </Button>
-
-                <Button 
-                  type="button"
-                  variant="outline"
-                  className="w-full mt-2"
-                  onClick={() => {
-                    console.log('🔧 Manual popup test');
-                    const popup = window.open(
-                      'https://accounts.google.com/oauth/authorize?client_id=' + 
-                      process.env.REACT_APP_GOOGLE_CLIENT_ID + 
-                      '&redirect_uri=' + encodeURIComponent(window.location.origin + '/auth/callback') + 
-                      '&response_type=code&scope=openid%20email%20profile&access_type=offline',
-                      'google-login',
-                      'width=500,height=600,scrollbars=yes,resizable=yes'
-                    );
-                    if (!popup) {
-                      alert('Popup blocked! Please allow popups for this site.');
-                    } else {
-                      console.log('✅ Manual popup opened successfully');
-                    }
-                  }}
-                >
-                  🔧 Test Manual Popup
-                </Button>
 
             <div className="text-xs text-center text-muted-foreground">
               <p>Sign in with your Google account to access the data room</p>

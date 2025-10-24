@@ -10,29 +10,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String     @id @default(uuid())
-  email     String     @unique
-  name      String?
-  dataRooms DataRoom[]
-  folders   Folder[]
-  files     File[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-
-  @@map("users")
-}
-
 model DataRoom {
-  id        String   @id @default(uuid())
-  name      String
+  id          String   @id @default(uuid())
+  name        String
   description String?
-  user_id   String   @map("user_id")
-  user      User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  folders   Folder[]
-  files     File[]
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  user_id     String   @map("user_id")
+  folders     Folder[]
+  files       File[]
+  created_at  DateTime @default(now()) @map("created_at")
+  updated_at  DateTime @updatedAt @map("updated_at")
 
   @@map("data_rooms")
 }
@@ -40,34 +26,34 @@ model DataRoom {
 model Folder {
   id             String   @id @default(uuid())
   name           String
-  parent         Folder?  @relation("FolderChildren", fields: [parentId], references: [id], onDelete: Cascade)
-  parentId       String?  @map("parent_folder_id")
-  children       Folder[] @relation("FolderChildren")
-  files          File[]
-  dataRoom       DataRoom @relation(fields: [dataRoomId], references: [id], onDelete: Cascade)
-  dataRoomId     String   @map("data_room_id")
+  data_room_id   String   @map("data_room_id")
+  parent_folder_id String? @map("parent_folder_id")
   user_id        String   @map("user_id")
-  user           User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  created_at     DateTime @default(now()) @map("created_at")
+  updated_at     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  data_room      DataRoom @relation(fields: [data_room_id], references: [id], onDelete: Cascade)
+  parent_folder  Folder?  @relation("FolderHierarchy", fields: [parent_folder_id], references: [id], onDelete: Cascade)
+  sub_folders    Folder[] @relation("FolderHierarchy")
 
   @@map("folders")
 }
 
 model File {
-  id        String   @id @default(uuid())
-  name      String
-  fileType  String   @map("mime_type")
-  size      Int?     @map("file_size")
-  filePath  String?  @map("file_path")
-  folder    Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  folderId  String?  @map("folder_id")
-  dataRoom  DataRoom @relation(fields: [dataRoomId], references: [id], onDelete: Cascade)
-  dataRoomId String  @map("data_room_id")
-  user_id   String   @map("user_id")
-  user      User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id          String   @id @default(uuid())
+  name        String
+  data_room_id String   @map("data_room_id")
+  folder_id   String?  @map("folder_id")
+  user_id     String   @map("user_id")
+  file_size   BigInt?  @map("file_size")
+  mime_type   String?  @map("mime_type")
+  file_path   String?  @map("file_path")
+  created_at  DateTime @default(now()) @map("created_at")
+  updated_at  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  data_room   DataRoom @relation(fields: [data_room_id], references: [id], onDelete: Cascade)
 
   @@map("files")
 }

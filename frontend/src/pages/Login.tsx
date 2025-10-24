@@ -15,41 +15,79 @@ export const Login: React.FC = () => {
       setError('');
       setLoading(true);
 
-      // Load Google Identity Services
-      const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
-      script.async = true;
-      script.defer = true;
-      document.head.appendChild(script);
+      const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+      
+      if (!clientId || clientId === 'your-google-client-id.apps.googleusercontent.com') {
+        setError('Google OAuth Client ID not configured. Please check your environment variables.');
+        setLoading(false);
+        return;
+      }
 
-      script.onload = () => {
-        // @ts-ignore
-        window.google.accounts.id.initialize({
-          client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
-          callback: async (response: any) => {
-            try {
-              const result = await api.post('/auth/google', {
-                credential: response.credential,
-              });
+      console.log('🔑 Google Client ID:', clientId);
 
-              if (result.data.success) {
-                localStorage.setItem('token', result.data.data.token);
-                localStorage.setItem('user', JSON.stringify(result.data.data.user));
-                navigate('/');
-              }
-            } catch (err: any) {
-              setError('Google login failed');
-            } finally {
-              setLoading(false);
-            }
-          },
-        });
+      // Check if Google script is already loaded
+      if (window.google?.accounts?.id) {
+        initializeGoogleAuth(clientId);
+      } else {
+        // Load Google Identity Services
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
 
-        // @ts-ignore
-        window.google.accounts.id.prompt();
-      };
+        script.onload = () => {
+          console.log('📜 Google script loaded');
+          initializeGoogleAuth(clientId);
+        };
+
+        script.onerror = () => {
+          console.error('❌ Failed to load Google script');
+          setError('Failed to load Google authentication');
+          setLoading(false);
+        };
+      }
     } catch (err: any) {
+      console.error('❌ Google login error:', err);
       setError('Failed to initialize Google login');
+      setLoading(false);
+    }
+  };
+
+  const initializeGoogleAuth = (clientId: string) => {
+    try {
+      console.log('🚀 Initializing Google Auth with client ID:', clientId);
+      
+      // @ts-ignore
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async (response: any) => {
+          try {
+            console.log('📝 Google callback received');
+            const result = await api.post('/auth?action=google', {
+              credential: response.credential,
+            });
+
+            if (result.data.success) {
+              localStorage.setItem('token', result.data.data.token);
+              localStorage.setItem('user', JSON.stringify(result.data.data.user));
+              navigate('/');
+            }
+          } catch (err: any) {
+            console.error('❌ API call failed:', err);
+            setError('Google login failed');
+          } finally {
+            setLoading(false);
+          }
+        },
+      });
+
+      // @ts-ignore
+      window.google.accounts.id.prompt();
+      console.log('✅ Google prompt triggered');
+    } catch (err) {
+      console.error('❌ Google auth initialization failed:', err);
+      setError('Failed to initialize Google authentication');
       setLoading(false);
     }
   };

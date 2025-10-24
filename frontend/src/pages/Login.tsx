@@ -24,19 +24,35 @@ export const Login: React.FC = () => {
       console.log('🚀 Starting OAuth redirect flow...');
 
       // Use OAuth redirect flow instead of One Tap
-      const redirectUri = encodeURIComponent(window.location.origin + '/auth/callback');
-      const scope = encodeURIComponent('openid email profile');
       const responseType = 'code';
       
-      const authUrl = `https://accounts.google.com/oauth/authorize?` +
-        `client_id=${clientId}&` +
-        `redirect_uri=${redirectUri}&` +
-        `response_type=${responseType}&` +
-        `scope=${scope}&` +
-        `access_type=offline&` +
-        `prompt=select_account`;
+      // Build URL parameters
+      const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: window.location.origin + '/auth/callback',
+        response_type: responseType,
+        scope: 'openid email profile',
+        access_type: 'offline',
+        prompt: 'select_account'
+      });
+
+      const authUrl = `https://accounts.google.com/oauth/authorize?${params.toString()}`;
 
       console.log('🔗 Redirecting to:', authUrl);
+      console.log('🔗 URL length:', authUrl.length);
+      console.log('🔗 Client ID:', clientId);
+      console.log('🔗 Redirect URI:', window.location.origin + '/auth/callback');
+      
+      // Test the URL first
+      try {
+        const testUrl = new URL(authUrl);
+        console.log('✅ URL is valid:', testUrl.href);
+      } catch (urlError) {
+        console.error('❌ Invalid URL:', urlError);
+        setError('Invalid OAuth URL generated');
+        setLoading(false);
+        return;
+      }
       
       // Redirect to Google OAuth
       window.location.href = authUrl;
@@ -91,6 +107,29 @@ export const Login: React.FC = () => {
                     />
                   </svg>
                   Continue with Google
+                </Button>
+
+                <Button 
+                  type="button"
+                  variant="outline"
+                  className="w-full mt-2"
+                  onClick={() => {
+                    const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+                    const params = new URLSearchParams({
+                      client_id: clientId!,
+                      redirect_uri: window.location.origin + '/auth/callback',
+                      response_type: 'code',
+                      scope: 'openid email profile',
+                      access_type: 'offline',
+                      prompt: 'select_account'
+                    });
+                    const authUrl = `https://accounts.google.com/oauth/authorize?${params.toString()}`;
+                    console.log('🔧 Test OAuth URL:', authUrl);
+                    console.log('🔧 Opening in new tab for testing...');
+                    window.open(authUrl, '_blank');
+                  }}
+                >
+                  🔧 Test OAuth URL
                 </Button>
 
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/Card';
-import { api } from '../lib/api';
+import { useAuth } from '../contexts/AuthContext';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -10,6 +10,7 @@ export const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,19 +18,10 @@ export const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      // Temporary bypass - simulate successful login
-      console.log('Temporary login bypass - backend not accessible');
-      
-      // Store fake token
-      localStorage.setItem('token', 'temp-token-123');
-      localStorage.setItem('user', JSON.stringify({
-        id: 'temp-user-id',
-        email: email,
-        name: 'Test User'
-      }));
-      
-      // Navigate to dashboard
-      navigate('/dashboard');
+      // Use AuthContext login function
+      await login(email, password);
+      // Navigate to main page
+      navigate('/');
     } catch (err: any) {
       setError('Login temporarily disabled - backend not accessible');
     } finally {

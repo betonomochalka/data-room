@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 import { setCorsHeaders, handlePreflight } from '../src/config/cors';
 
 // Inline token generation function
@@ -40,7 +41,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Verify the Google ID token
-      const { OAuth2Client } = require('google-auth-library');
+      // OAuth2Client is now imported at the top
       const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
       
       const ticket = await client.verifyIdToken({

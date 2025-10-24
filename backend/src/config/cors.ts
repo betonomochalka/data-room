@@ -5,8 +5,6 @@ export const corsConfig = {
 
 // Function to set CORS headers for Vercel API functions
 export const setCorsHeaders = (res: any, origin?: string) => {
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  
   // Allow all origins temporarily
   res.setHeader('Access-Control-Allow-Origin', '*');
   

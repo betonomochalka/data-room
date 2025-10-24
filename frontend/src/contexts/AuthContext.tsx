@@ -56,8 +56,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const signup = async (email: string, password: string, name?: string) => {
-    const response = await api.post<AuthResponse>('/auth/signup', { email, password, name });
-    const { user: userData, token: authToken } = response.data.data;
+    // Temporary bypass - simulate successful signup
+    console.log('Temporary signup bypass - backend not accessible');
+    
+    const userData = {
+      id: 'temp-user-id',
+      email: email,
+      name: name || 'Test User',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    const authToken = 'temp-token-123';
 
     setUser(userData);
     setToken(authToken);

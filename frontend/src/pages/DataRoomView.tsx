@@ -29,35 +29,7 @@ export const DataRoomView: React.FC = () => {
     if (saved) {
       return JSON.parse(saved);
     }
-    return [
-      {
-        id: 'temp-folder-1',
-        name: 'Documents',
-        dataRoomId: id || 'temp-room',
-        parentId: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        _count: { files: 2, children: 1 }
-      },
-      {
-        id: 'temp-folder-2',
-        name: 'Images',
-        dataRoomId: id || 'temp-room',
-        parentId: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        _count: { files: 0, children: 0 }
-      },
-      {
-        id: 'temp-folder-3',
-        name: 'Subfolder',
-        dataRoomId: id || 'temp-room',
-        parentId: 'temp-folder-1',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        _count: { files: 0, children: 0 }
-      }
-    ];
+    return []; // Start with empty folders
   };
 
   const getInitialFiles = (): FileType[] => {
@@ -65,28 +37,7 @@ export const DataRoomView: React.FC = () => {
     if (saved) {
       return JSON.parse(saved);
     }
-    return [
-      {
-        id: 'temp-file-1',
-        name: 'Sample Document.pdf',
-        fileType: 'application/pdf',
-        size: 1024000,
-        blobUrl: 'data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwo...', // Sample PDF data
-        folderId: 'temp-folder-1',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      },
-      {
-        id: 'temp-file-2',
-        name: 'Another File.pdf',
-        fileType: 'application/pdf',
-        size: 2048000,
-        blobUrl: 'data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwo...', // Sample PDF data
-        folderId: 'temp-folder-1',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-    ];
+    return []; // Start with empty files
   };
 
   const [tempFolders, setTempFolders] = useState<FolderType[]>(getInitialFolders);
@@ -104,7 +55,7 @@ export const DataRoomView: React.FC = () => {
   };
 
   // Temporary bypass for data room fetching
-  const { data: dataRoomData, isLoading: isLoadingDataRoom } = useQuery<ApiResponse<DataRoom>>({
+  const { data: dataRoomData } = useQuery<ApiResponse<DataRoom>>({
     queryKey: ['dataRoom', id],
     queryFn: async () => {
       console.log('Temporary bypass - returning mock data room');
@@ -124,7 +75,7 @@ export const DataRoomView: React.FC = () => {
   });
 
   // Temporary bypass for folder fetching
-  const { data: folderData, isLoading: isLoadingFolder } = useQuery({
+  const { data: folderData } = useQuery({
     queryKey: ['folder', folderId],
     queryFn: async () => {
       console.log('Temporary bypass - returning mock folder data');
@@ -254,10 +205,25 @@ export const DataRoomView: React.FC = () => {
     },
   });
 
-  // const currentData = folderId ? folderData?.data : dataRoomData?.data;
-  const folders = folderId ? folderData?.data?.children || [] : dataRoomData?.data?.folders || [];
-  const files = folderId ? folderData?.data?.files || [] : [];
-  const isLoading = folderId ? isLoadingFolder : isLoadingDataRoom;
+  // Get current folder's contents
+  const getCurrentFolderContents = () => {
+    if (folderId) {
+      // Show contents of specific folder
+      return {
+        folders: tempFolders.filter(folder => folder.parentId === folderId),
+        files: tempFiles.filter(file => file.folderId === folderId)
+      };
+    } else {
+      // Show root level contents (root folders and files)
+      return {
+        folders: tempFolders.filter(folder => !folder.parentId),
+        files: tempFiles.filter(file => !file.folderId || !tempFolders.find(f => f.id === file.folderId))
+      };
+    }
+  };
+
+  const { folders, files } = getCurrentFolderContents();
+  const isLoading = false; // Always false since we're using localStorage
 
   const handleCreateFolder = (e: React.FormEvent) => {
     e.preventDefault();
@@ -269,16 +235,20 @@ export const DataRoomView: React.FC = () => {
   const handleUpload = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedFile && uploadFileName.trim()) {
-      // For root data room, we need at least one folder
-      if (!folderId && tempFolders.length === 0) {
-        alert('Please create a folder first before uploading files');
-        return;
+      // Upload to current folder (or create a default folder if at root level)
+      let targetFolderId = folderId;
+      
+      if (!targetFolderId) {
+        // At root level - create a default folder if none exists
+        const rootFolders = tempFolders.filter(folder => !folder.parentId);
+        if (rootFolders.length === 0) {
+          alert('Please create a folder first before uploading files');
+          return;
+        }
+        targetFolderId = rootFolders[0].id;
       }
       
-      const targetFolderId = folderId || tempFolders[0]?.id;
-      if (targetFolderId) {
-        uploadFileMutation.mutate({ file: selectedFile, name: uploadFileName, folderId: targetFolderId });
-      }
+      uploadFileMutation.mutate({ file: selectedFile, name: uploadFileName, folderId: targetFolderId });
     }
   };
 
@@ -351,9 +321,9 @@ export const DataRoomView: React.FC = () => {
       <div className="flex-1 overflow-auto">
         <div className="container mx-auto px-4 py-8">
       <div className="flex items-center gap-4 mb-6">
-        <Button variant="outline" onClick={() => navigate(-1)}>
+        <Button variant="outline" onClick={() => navigate('/')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
+          Back to Data Rooms
         </Button>
         <div>
           <h1 className="text-3xl font-bold">

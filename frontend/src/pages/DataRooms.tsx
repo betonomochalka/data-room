@@ -12,16 +12,15 @@ import { formatDate } from '../lib/utils';
 export const DataRooms: React.FC = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newDataRoomName, setNewDataRoomName] = useState('');
-  const [tempDataRooms, setTempDataRooms] = useState<DataRoom[]>([
-    {
-      id: 'temp-1',
-      name: 'Sample Data Room',
-      ownerId: 'temp-user-id',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      _count: { folders: 3 }
+  const getInitialDataRooms = (): DataRoom[] => {
+    const saved = localStorage.getItem('user-data-rooms');
+    if (saved) {
+      return JSON.parse(saved);
     }
-  ]);
+    return []; // Start with empty data rooms
+  };
+
+  const [tempDataRooms, setTempDataRooms] = useState<DataRoom[]>(getInitialDataRooms);
   // const [deleteId, setDeleteId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
@@ -43,6 +42,11 @@ export const DataRooms: React.FC = () => {
     },
   });
 
+  const saveDataRooms = (dataRooms: DataRoom[]) => {
+    localStorage.setItem('user-data-rooms', JSON.stringify(dataRooms));
+    setTempDataRooms(dataRooms);
+  };
+
   const createMutation = useMutation({
     mutationFn: async (name: string) => {
       // Temporary bypass - create mock data room
@@ -55,7 +59,8 @@ export const DataRooms: React.FC = () => {
         updatedAt: new Date().toISOString(),
         _count: { folders: 0 }
       };
-      setTempDataRooms(prev => [...prev, newDataRoom]);
+      const updatedDataRooms = [...tempDataRooms, newDataRoom];
+      saveDataRooms(updatedDataRooms);
       return newDataRoom;
     },
     onSuccess: () => {
@@ -69,7 +74,8 @@ export const DataRooms: React.FC = () => {
     mutationFn: async (id: string) => {
       // Temporary bypass - delete mock data room
       console.log('Temporary bypass - deleting mock data room');
-      setTempDataRooms(prev => prev.filter(room => room.id !== id));
+      const updatedDataRooms = tempDataRooms.filter(room => room.id !== id);
+      saveDataRooms(updatedDataRooms);
       return { id };
     },
     onSuccess: () => {

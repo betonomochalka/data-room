@@ -10,6 +10,13 @@ import { Input } from '../components/ui/Input';
 import { FileTree } from '../components/FileTree';
 import { formatDate, formatBytes } from '../lib/utils';
 
+// Global file storage declaration
+declare global {
+  interface Window {
+    fileStorage?: Map<string, string>;
+  }
+}
+
 export const DataRoomView: React.FC = () => {
   const { id, folderId } = useParams<{ id: string; folderId?: string }>();
   const navigate = useNavigate();
@@ -176,35 +183,45 @@ export const DataRoomView: React.FC = () => {
     },
   });
 
+  // In-memory file storage (survives page refresh within same session)
+  const getFileStorage = () => {
+    if (!window.fileStorage) {
+      window.fileStorage = new Map();
+    }
+    return window.fileStorage;
+  };
+
   const uploadFileMutation = useMutation({
     mutationFn: async ({ file, name, folderId }: { file: File; name: string; folderId: string }) => {
       console.log('Temporary bypass - creating mock file');
       
-      // Convert file to base64 for storage
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve, reject) => {
-        reader.onload = () => {
-          const result = reader.result as string;
-          resolve(result);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      
-      const base64Data = await base64Promise;
+      // Create a blob URL that persists in memory
+      const blobUrl = URL.createObjectURL(file);
       
       const newFile: FileType = {
         id: `temp-file-${Date.now()}`,
         name: name,
         fileType: file.type || 'application/pdf',
         size: file.size,
-        blobUrl: base64Data, // Store as base64 data URL
+        blobUrl: blobUrl, // Store as blob URL
         folderId: folderId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
-      const updatedFiles = [...tempFiles, newFile];
+      
+      // Store file metadata only in localStorage (without the actual file data)
+      const fileMetadata: FileType = {
+        ...newFile,
+        blobUrl: '' // Empty string instead of null for localStorage
+      };
+      
+      const updatedFiles = [...tempFiles, fileMetadata];
       saveFiles(updatedFiles);
+      
+      // Store the actual file blob URL in memory
+      const fileStorage = getFileStorage();
+      fileStorage.set(newFile.id, blobUrl);
+      
       return newFile;
     },
     onSuccess: () => {
@@ -306,47 +323,55 @@ export const DataRoomView: React.FC = () => {
 
   const handleFileClick = (fileId: string) => {
     const file = tempFiles.find(f => f.id === fileId);
-    if (file && file.blobUrl) {
-      // Create a proper PDF viewer URL
-      if (file.fileType === 'application/pdf') {
-        // Open PDF in new tab with proper viewer
-        const pdfWindow = window.open('', '_blank');
-        if (pdfWindow) {
-          pdfWindow.document.write(`
-            <html>
-              <head>
-                <title>${file.name}</title>
-                <style>
-                  body { margin: 0; padding: 0; background: #f5f5f5; }
-                  .container { width: 100%; height: 100vh; display: flex; flex-direction: column; }
-                  .header { background: white; padding: 10px; border-bottom: 1px solid #ddd; }
-                  .viewer { flex: 1; background: white; }
-                  iframe { width: 100%; height: 100%; border: none; }
-                </style>
-              </head>
-              <body>
-                <div class="container">
-                  <div class="header">
-                    <h3>${file.name}</h3>
+    if (file) {
+      // Get blob URL from memory storage
+      const fileStorage = getFileStorage();
+      const blobUrl = fileStorage.get(fileId);
+      
+      if (blobUrl) {
+        // Create a proper PDF viewer URL
+        if (file.fileType === 'application/pdf') {
+          // Open PDF in new tab with proper viewer
+          const pdfWindow = window.open('', '_blank');
+          if (pdfWindow) {
+            pdfWindow.document.write(`
+              <html>
+                <head>
+                  <title>${file.name}</title>
+                  <style>
+                    body { margin: 0; padding: 0; background: #f5f5f5; }
+                    .container { width: 100%; height: 100vh; display: flex; flex-direction: column; }
+                    .header { background: white; padding: 10px; border-bottom: 1px solid #ddd; }
+                    .viewer { flex: 1; background: white; }
+                    iframe { width: 100%; height: 100%; border: none; }
+                  </style>
+                </head>
+                <body>
+                  <div class="container">
+                    <div class="header">
+                      <h3>${file.name}</h3>
+                    </div>
+                    <div class="viewer">
+                      <iframe src="${blobUrl}" type="application/pdf"></iframe>
+                    </div>
                   </div>
-                  <div class="viewer">
-                    <iframe src="${file.blobUrl}" type="application/pdf"></iframe>
-                  </div>
-                </div>
-              </body>
-            </html>
-          `);
-          pdfWindow.document.close();
+                </body>
+              </html>
+            `);
+            pdfWindow.document.close();
+          }
+        } else {
+          // For other file types, create a download link
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = file.name;
+          link.target = '_blank';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
         }
       } else {
-        // For other file types, create a download link
-        const link = document.createElement('a');
-        link.href = file.blobUrl;
-        link.download = file.name;
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        alert('File not found. Please re-upload the file.');
       }
     }
   };

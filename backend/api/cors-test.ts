@@ -1,4 +1,5 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
+import { setCorsHeaders } from '../../src/config/cors';
 
 const allowedOrigins = process.env.NODE_ENV === 'production' 
   ? [
@@ -13,11 +14,8 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
     ];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Set CORS headers for all origins
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  // Set CORS headers from centralized config
+  setCorsHeaders(res, req.headers.origin as string);
 
   // Handle preflight requests
   if (req.method === 'OPTIONS') {

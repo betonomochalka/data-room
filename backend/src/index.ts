@@ -10,14 +10,15 @@ import { authRoutes } from './routes/auth';
 import { dataRoomRoutes } from './routes/dataRooms';
 import { folderRoutes } from './routes/folders';
 import { fileRoutes } from './routes/files';
+import { corsConfig } from './config/cors';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-// Environment-based CORS configuration
 console.log('🔧 [CORS] Environment:', process.env.NODE_ENV || 'development');
+console.log('🔧 [CORS] Current allowed origins:', corsConfig.origin);
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -29,11 +30,7 @@ const limiter = rateLimit({
 app.use(helmet());
 
 // Manual CORS headers as fallback
-app.use(
-  cors({
-    origin: 'https://data-room-196e.vercel.app',
-  })
-);
+app.use(cors(corsConfig));
 app.use(morgan('combined'));
 app.use(limiter);
 app.use(express.json({ limit: '10mb' }));

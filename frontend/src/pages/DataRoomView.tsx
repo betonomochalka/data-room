@@ -61,19 +61,13 @@ export const DataRoomView: React.FC = () => {
     }));
   };
 
-  // Save to localStorage whenever state changes
-  const saveFolders = (folders: FolderType[]) => {
-    const foldersWithCounts = calculateFolderCounts(folders, tempFiles);
+  // Combined save function for both folders and files
+  const saveFoldersAndFiles = (folders: FolderType[], files: FileType[]) => {
+    const foldersWithCounts = calculateFolderCounts(folders, files);
     localStorage.setItem(`dataRoom-${id}-folders`, JSON.stringify(foldersWithCounts));
-    setTempFolders(foldersWithCounts);
-  };
-
-  const saveFiles = (files: FileType[]) => {
     localStorage.setItem(`dataRoom-${id}-files`, JSON.stringify(files));
-    setTempFiles(files);
-    // Update folder counts when files change
-    const foldersWithCounts = calculateFolderCounts(tempFolders, files);
     setTempFolders(foldersWithCounts);
+    setTempFiles(files);
   };
 
   // Temporary bypass for data room fetching
@@ -126,7 +120,7 @@ export const DataRoomView: React.FC = () => {
         _count: { files: 0, children: 0 }
       };
       const updatedFolders = [...tempFolders, newFolder];
-      saveFolders(updatedFolders);
+      saveFoldersAndFiles(updatedFolders, tempFiles);
       return newFolder;
     },
     onSuccess: () => {
@@ -144,7 +138,7 @@ export const DataRoomView: React.FC = () => {
     mutationFn: async (folderIdToDelete: string) => {
       console.log('Temporary bypass - deleting mock folder');
       const updatedFolders = tempFolders.filter(folder => folder.id !== folderIdToDelete);
-      saveFolders(updatedFolders);
+      saveFoldersAndFiles(updatedFolders, tempFiles);
       return { id: folderIdToDelete };
     },
     onSuccess: () => {
@@ -156,7 +150,7 @@ export const DataRoomView: React.FC = () => {
     mutationFn: async (fileId: string) => {
       console.log('Temporary bypass - deleting mock file');
       const updatedFiles = tempFiles.filter(file => file.id !== fileId);
-      saveFiles(updatedFiles);
+      saveFoldersAndFiles(tempFolders, updatedFiles);
       return { id: fileId };
     },
     onSuccess: () => {
@@ -170,7 +164,7 @@ export const DataRoomView: React.FC = () => {
       const updatedFolders = tempFolders.map(folder => 
         folder.id === id ? { ...folder, name, updatedAt: new Date().toISOString() } : folder
       );
-      saveFolders(updatedFolders);
+      saveFoldersAndFiles(updatedFolders, tempFiles);
       return { id, name };
     },
     onSuccess: () => {
@@ -187,7 +181,7 @@ export const DataRoomView: React.FC = () => {
       const updatedFiles = tempFiles.map(file => 
         file.id === id ? { ...file, name, updatedAt: new Date().toISOString() } : file
       );
-      saveFiles(updatedFiles);
+      saveFoldersAndFiles(tempFolders, updatedFiles);
       return { id, name };
     },
     onSuccess: () => {
@@ -231,7 +225,7 @@ export const DataRoomView: React.FC = () => {
       };
       
       const updatedFiles = [...tempFiles, fileMetadata];
-      saveFiles(updatedFiles);
+      saveFoldersAndFiles(tempFolders, updatedFiles);
       
       // Store the actual file blob URL in memory
       const fileStorage = getFileStorage();

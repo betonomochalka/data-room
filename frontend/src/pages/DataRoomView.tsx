@@ -156,6 +156,12 @@ export const DataRoomView: React.FC = () => {
 
   const uploadFileMutation = useMutation({
     mutationFn: async ({ file, name, folderId }: { file: File; name: string; folderId: string }) => {
+      // Check file size (Vercel free tier limit: 4.5MB)
+      const maxSize = 4.5 * 1024 * 1024; // 4.5MB in bytes
+      if (file.size > maxSize) {
+        throw new Error(`File size exceeds 4.5MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB. Please upgrade your Vercel plan or use a smaller file.`);
+      }
+
       const formData = new FormData();
       formData.append('file', file);
       formData.append('name', name);
@@ -173,12 +179,16 @@ export const DataRoomView: React.FC = () => {
       setIsUploadDialogOpen(false);
       setSelectedFile(null);
       setUploadFileName('');
+      alert('✅ File uploaded successfully!');
       // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ['files', id, folderId] });
     },
     onError: (error: any) => {
       console.error('File upload error:', error);
-      alert(`Upload failed: ${error.message}`);
+      const message = error.response?.status === 413 
+        ? 'File too large! Vercel free tier has a 4.5MB limit.'
+        : error.message || 'File upload failed';
+      alert(`❌ Upload failed: ${message}`);
     },
   });
 
@@ -382,6 +392,33 @@ export const DataRoomView: React.FC = () => {
         <div>Loading...</div>
       ) : (
         <div className="space-y-6">
+          {/* Empty State */}
+          {filteredFolders.length === 0 && filteredFiles.length === 0 && (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <Folder className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No files or folders yet</h3>
+                <p className="text-muted-foreground mb-6">
+                  {folderId 
+                    ? 'Upload files or create folders to get started'
+                    : 'Create folders to organize your documents'}
+                </p>
+                <div className="flex gap-4 justify-center">
+                  <Button onClick={() => setIsCreateFolderDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Folder
+                  </Button>
+                  {folderId && (
+                    <Button variant="outline" onClick={() => setIsUploadDialogOpen(true)}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload File
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {filteredFolders.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold mb-4">Folders</h2>

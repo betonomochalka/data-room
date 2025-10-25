@@ -100,8 +100,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         message: 'Data room created successfully'
       });
 
+    } else if (action === 'folders' && id && typeof id === 'string') {
+      // Get folders for a data room
+      const folders = await prisma.folder.findMany({
+        where: { 
+          dataRoomId: id,
+          dataRoom: {
+            ownerId: userId
+          }
+        },
+        include: {
+          _count: {
+            select: { 
+              files: true,
+              children: true 
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      res.status(200).json({
+        success: true,
+        data: folders
+      });
+
+    } else if (action === 'files' && id && typeof id === 'string') {
+      // Get files for a data room (root level files)
+      const files = await prisma.file.findMany({
+        where: { 
+          folder: {
+            dataRoomId: id,
+            dataRoom: {
+              ownerId: userId
+            },
+            parentId: null // Only root level files
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      res.status(200).json({
+        success: true,
+        data: files
+      });
+
     } else if (req.method === 'GET' && id && typeof id === 'string') {
-      // Get specific data room
+      // Get specific data room (must come AFTER action routes)
       const dataRoom = await prisma.dataRoom.findFirst({
         where: { 
           id,
@@ -153,51 +198,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.status(200).json({
         success: true,
         message: 'Data room deleted successfully'
-      });
-
-    } else if (action === 'folders' && id && typeof id === 'string') {
-      // Get folders for a data room
-      const folders = await prisma.folder.findMany({
-        where: { 
-          dataRoomId: id,
-          dataRoom: {
-            ownerId: userId
-          }
-        },
-        include: {
-          _count: {
-            select: { 
-              files: true,
-              children: true 
-            }
-          }
-        },
-        orderBy: { createdAt: 'desc' }
-      });
-
-      res.status(200).json({
-        success: true,
-        data: folders
-      });
-
-    } else if (action === 'files' && id && typeof id === 'string') {
-      // Get files for a data room (root level files)
-      const files = await prisma.file.findMany({
-        where: { 
-          folder: {
-            dataRoomId: id,
-            dataRoom: {
-              ownerId: userId
-            },
-            parentId: null // Only root level files
-          }
-        },
-        orderBy: { createdAt: 'desc' }
-      });
-
-      res.status(200).json({
-        success: true,
-        data: files
       });
 
     } else {

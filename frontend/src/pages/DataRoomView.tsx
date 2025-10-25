@@ -101,11 +101,11 @@ export const DataRoomView: React.FC = () => {
       return { id: folderIdToDelete };
     },
     onSuccess: () => {
-      // Invalidate relevant queries
+      // Invalidate ALL related queries to refresh file tree
+      queryClient.invalidateQueries({ queryKey: ['dataRoom', id] });
+      queryClient.invalidateQueries({ queryKey: ['folders', id] });
       if (folderId) {
         queryClient.invalidateQueries({ queryKey: ['folder', folderId] });
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['folders', id] });
       }
     },
   });
@@ -116,8 +116,13 @@ export const DataRoomView: React.FC = () => {
       return { id: fileId };
     },
     onSuccess: () => {
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ['files', id, folderId] });
+      // Invalidate ALL related queries to refresh file tree
+      queryClient.invalidateQueries({ queryKey: ['dataRoom', id] });
+      queryClient.invalidateQueries({ queryKey: ['folders', id] });
+      if (folderId) {
+        queryClient.invalidateQueries({ queryKey: ['folder', folderId] });
+        queryClient.invalidateQueries({ queryKey: ['files', id, folderId] });
+      }
     },
   });
 
@@ -180,8 +185,13 @@ export const DataRoomView: React.FC = () => {
       setSelectedFile(null);
       setUploadFileName('');
       alert('✅ File uploaded successfully!');
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ['files', id, folderId] });
+      // Invalidate ALL related queries to refresh file tree
+      queryClient.invalidateQueries({ queryKey: ['dataRoom', id] });
+      queryClient.invalidateQueries({ queryKey: ['folders', id] });
+      if (folderId) {
+        queryClient.invalidateQueries({ queryKey: ['folder', folderId] });
+        queryClient.invalidateQueries({ queryKey: ['files', id, folderId] });
+      }
     },
     onError: (error: any) => {
       console.error('File upload error:', error);
@@ -357,13 +367,35 @@ export const DataRoomView: React.FC = () => {
       <div className="flex-1 overflow-auto">
         <div className="container mx-auto px-4 py-8">
       <div className="flex items-center gap-4 mb-6">
-        <Button variant="outline" onClick={() => navigate('/')}>
+        <Button 
+          variant="outline" 
+          onClick={() => {
+            if (folderId) {
+              // If we're in a folder, check if it has a parent
+              const currentFolder = folderData?.data;
+              if (currentFolder?.parentId) {
+                // Go to parent folder
+                navigate(`/data-rooms/${id}/folders/${currentFolder.parentId}`);
+              } else {
+                // Go to data room root
+                navigate(`/data-rooms/${id}`);
+              }
+            } else {
+              // If we're at data room root, go to data rooms list
+              navigate('/');
+            }
+          }}
+        >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Data Rooms
+          {folderId 
+            ? (folderData?.data?.parent?.name 
+                ? `Back to ${folderData.data.parent.name}` 
+                : 'Back to Data Room')
+            : 'Back to Data Rooms'}
         </Button>
         <div>
           <h1 className="text-3xl font-bold">
-            {folderId ? folderData?.data?.folder?.name : dataRoomData?.data?.name}
+            {folderId ? folderData?.data?.name : dataRoomData?.data?.name}
           </h1>
           <p className="text-muted-foreground">
             {folderId ? `Folder in ${dataRoomData?.data?.name}` : 'Data Room'}

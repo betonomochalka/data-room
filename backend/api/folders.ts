@@ -94,6 +94,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         },
         include: {
+          parent: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
           children: {
             include: {
               _count: {
@@ -115,11 +121,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       res.status(200).json({
         success: true,
-        data: {
-          folder,
-          children: folder.children,
-          files: folder.files
-        }
+        data: folder
       });
 
     } else if (req.method === 'PATCH' && id && typeof id === 'string') {

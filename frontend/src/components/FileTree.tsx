@@ -27,9 +27,10 @@ export const FileTree: React.FC<FileTreeProps> = ({
 }) => {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
 
-  // Auto-expand folder when navigating to it
+  // Auto-expand/collapse folder when navigating
   useEffect(() => {
     if (currentPath) {
+      // When navigating to a folder, expand it and keep parent folders expanded
       setExpandedFolders(prev => {
         const newSet = new Set(prev);
         newSet.add(currentPath);
@@ -37,6 +38,21 @@ export const FileTree: React.FC<FileTreeProps> = ({
       });
     }
   }, [currentPath]);
+
+  // Clear expansion state when folders list changes significantly
+  useEffect(() => {
+    // Keep only folders that still exist
+    const folderIds = new Set(folders.map(f => f.id));
+    setExpandedFolders(prev => {
+      const newSet = new Set<string>();
+      prev.forEach(id => {
+        if (folderIds.has(id) || id === currentPath) {
+          newSet.add(id);
+        }
+      });
+      return newSet;
+    });
+  }, [folders, currentPath]);
 
   const toggleExpanded = (folderId: string) => {
     const newExpanded = new Set(expandedFolders);

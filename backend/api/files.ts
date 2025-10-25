@@ -2,6 +2,9 @@ import { VercelRequest, VercelResponse } from '@vercel/node';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import { setCorsHeaders, handlePreflight } from '../src/config/cors';
+import formidable from 'formidable';
+import { uploadFile } from '../src/utils/supabase';
+import { promises as fs } from 'fs';
 
 // Inline authentication middleware
 const authenticateToken = (req: VercelRequest): string | null => {
@@ -22,6 +25,13 @@ const authenticateToken = (req: VercelRequest): string | null => {
 
 const prisma = new PrismaClient();
 
+// Disable body parser for file uploads
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   setCorsHeaders(res, req.headers.origin);
 
@@ -40,11 +50,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (req.method === 'POST' && action === 'upload') {
-      // Handle file upload
-      const { name, folderId } = req.body;
+      // Handle file upload with formidable
+      const form = formidable({
+        maxFileSize: 100 * 1024 * 1024, // 100MB for Vercel Pro
+      });
 
-      if (!name || !folderId) {
-        res.status(400).json({ error: 'Name and folderId are required' });
+      const [fields, files] = await form.parse(req as any);
+      
+      const name = fields.name?.[0];
+      const folderId = fields.folderId?.[0];
+      const uploadedFile = files.file?.[0];
+
+      if (!name || !folderId || !uploadedFile) {
+        res.status(400).json({ error: 'Name, folderId, and file are required' });
         return;
       }
 
@@ -63,14 +81,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return;
       }
 
-      // For now, create a placeholder file record
-      // In a real implementation, you would handle the actual file upload here
+      // Read the file buffer
+      const fileBuffer = await fs.readFile(uploadedFile.filepath);
+      
+      // Upload to Supabase Storage
+      const filePath = await uploadFile(fileBuffer, uploadedFile.originalFilename || name);
+
+      // Create file record in database
       const file = await prisma.file.create({
         data: {
           name,
-          mimeType: 'application/pdf', // Default to PDF for now
-          fileSize: BigInt(0), // Placeholder size
-          filePath: '', // Placeholder path
+          mimeType: uploadedFile.mimetype || 'application/octet-stream',
+          fileSize: BigInt(uploadedFile.size),
+          filePath,
           folderId,
           dataRoomId: folder.dataRoomId,
           userId: userId,
@@ -151,6 +174,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (error) {
     console.error('Files API error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    setCorsHeaders(res, req.headers.origin);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  } finally {
+    await prisma.$disconnect();
   }
 }

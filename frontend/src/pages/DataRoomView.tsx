@@ -32,7 +32,7 @@ export const DataRoomView: React.FC = () => {
   const { data: dataRoomData } = useQuery<ApiResponse<DataRoom>>({
     queryKey: ['dataRoom', id],
     queryFn: async () => {
-      const response = await api.get(`/data-rooms/${id}`);
+      const response = await api.get(`/data-rooms`, { params: { id } });
       return response.data;
     },
     enabled: !!id && !folderId,
@@ -42,7 +42,7 @@ export const DataRoomView: React.FC = () => {
   const { data: folderData } = useQuery({
     queryKey: ['folder', folderId],
     queryFn: async () => {
-      const response = await api.get(`/folders/${folderId}`);
+      const response = await api.get(`/folders`, { params: { id: folderId } });
       return response.data;
     },
     enabled: !!folderId,

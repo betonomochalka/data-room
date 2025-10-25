@@ -30,22 +30,26 @@ const authenticateToken = (req: VercelRequest): string | null => {
 const prisma = new PrismaClient();
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  setCorsHeaders(res, req.headers.origin);
+  // ALWAYS set CORS headers first, no matter what
+  try {
+    setCorsHeaders(res, req.headers.origin);
+  } catch (e) {
+    console.error('Failed to set CORS headers:', e);
+  }
 
+  // Handle preflight immediately
   if (req.method === 'OPTIONS') {
-    handlePreflight(req, res);
-    return;
+    return handlePreflight(req, res);
   }
-
-  const userId = authenticateToken(req);
-  if (!userId) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return;
-  }
-
-  const { id, action } = req.query;
 
   try {
+    const userId = authenticateToken(req);
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { id, action } = req.query;
+
     if (req.method === 'GET' && !id) {
       // Get all data rooms for the user
       const dataRooms = await prisma.dataRoom.findMany({
@@ -197,10 +201,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
 
     } else {
-      res.status(405).json({ error: 'Method not allowed' });
+      return res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (error) {
-    console.error('Data rooms API error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('❌ Data rooms API error:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    
+    // Ensure CORS headers are set even on error
+    try {
+      setCorsHeaders(res, req.headers.origin);
+    } catch (e) {
+      // Ignore
+    }
+    
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }

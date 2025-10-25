@@ -49,13 +49,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'GET' && !id) {
       // Get all data rooms for the user
       const dataRooms = await prisma.dataRoom.findMany({
-        where: { user_id: userId },
+        where: { ownerId: userId },
         include: {
           _count: {
             select: { folders: true }
           }
         },
-        orderBy: { created_at: 'desc' }
+        orderBy: { createdAt: 'desc' }
       });
 
       res.status(200).json({
@@ -81,7 +81,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const dataRoom = await prisma.dataRoom.create({
         data: {
           name,
-          user_id: userId,
+          ownerId: userId,
         },
         include: {
           _count: {
@@ -101,16 +101,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const dataRoom = await prisma.dataRoom.findFirst({
         where: { 
           id,
-          user_id: userId 
+          ownerId: userId 
         },
         include: {
           folders: {
-            where: { parent_folder_id: null }, // Only root folders
+            where: { parentId: null }, // Only root folders
             include: {
               _count: {
                 select: { 
                   files: true,
-                  sub_folders: true 
+                  children: true 
                 }
               }
             }
@@ -133,7 +133,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const dataRoom = await prisma.dataRoom.findFirst({
         where: { 
           id,
-          user_id: userId 
+          ownerId: userId 
         }
       });
 
@@ -155,20 +155,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Get folders for a data room
       const folders = await prisma.folder.findMany({
         where: { 
-          data_room_id: id,
-          data_room: {
-            user_id: userId
+          dataRoomId: id,
+          dataRoom: {
+            ownerId: userId
           }
         },
         include: {
           _count: {
             select: { 
               files: true,
-              sub_folders: true 
+              children: true 
             }
           }
         },
-        orderBy: { created_at: 'desc' }
+        orderBy: { createdAt: 'desc' }
       });
 
       res.status(200).json({
@@ -181,14 +181,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const files = await prisma.file.findMany({
         where: { 
           folder: {
-            data_room_id: id,
-            data_room: {
-              user_id: userId
+            dataRoomId: id,
+            dataRoom: {
+              ownerId: userId
             },
-            parent_folder_id: null // Only root level files
+            parentId: null // Only root level files
           }
         },
-        orderBy: { created_at: 'desc' }
+        orderBy: { createdAt: 'desc' }
       });
 
       res.status(200).json({

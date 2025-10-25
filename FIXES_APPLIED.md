@@ -75,10 +75,27 @@ model File {
 
 ---
 
+### ✅ 5. Fixed Data Rooms API Field Names (data-rooms.ts)
+
+**Problem**: API was using database column names instead of Prisma model field names:
+- `user_id` → should be `ownerId`
+- `created_at` → should be `createdAt`
+- `data_room_id` → should be `dataRoomId`
+- `parent_folder_id` → should be `parentId`
+- `sub_folders` → should be `children`
+- `data_room` → should be `dataRoom`
+
+**Fix**: Changed all occurrences to use correct Prisma field names.
+
+**Location**: `backend/api/data-rooms.ts` (multiple lines)
+
+---
+
 ## Build Status
 
 ✅ **All TypeScript errors resolved**
 ✅ **Code now matches Prisma schema**
+✅ **All API routes fixed**
 ✅ **Ready to deploy to Vercel**
 
 ---
@@ -87,8 +104,8 @@ model File {
 
 1. Commit these changes:
 ```bash
-git add backend/src/routes/files.ts backend/src/routes/folders.ts
-git commit -m "Fix TypeScript errors - align code with Prisma schema"
+git add backend/src/routes/files.ts backend/src/routes/folders.ts backend/api/data-rooms.ts
+git commit -m "Fix all TypeScript errors - align with Prisma schema"
 ```
 
 2. Push to trigger Vercel deployment:

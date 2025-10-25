@@ -53,6 +53,7 @@ export const DataRoomView: React.FC = () => {
     queryKey: ['folders', id],
     queryFn: async () => {
       const response = await api.get(`/data-rooms?id=${id}&action=folders`);
+      console.log('📁 Folders response:', response.data);
       return response.data;
     },
     enabled: !!id,
@@ -63,6 +64,7 @@ export const DataRoomView: React.FC = () => {
     queryKey: ['files', id, folderId],
     queryFn: async () => {
       const response = await api.get(folderId ? `/folders?id=${folderId}&action=files` : `/data-rooms?id=${id}&action=files`);
+      console.log('📄 Files response:', response.data);
       return response.data;
     },
     enabled: !!id,
@@ -319,8 +321,8 @@ export const DataRoomView: React.FC = () => {
     <div className="flex h-screen">
       {/* File Tree Sidebar */}
       <FileTree
-        folders={foldersData?.data || []}
-        files={filesData?.data || []}
+        folders={Array.isArray(foldersData?.data) ? foldersData.data : []}
+        files={Array.isArray(filesData?.data) ? filesData.data : []}
         onFolderClick={handleFolderClick}
         onFileClick={handleFileClick}
         currentPath={folderId}

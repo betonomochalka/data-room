@@ -321,8 +321,16 @@ export const DataRoomView: React.FC = () => {
     <div className="flex h-screen">
       {/* File Tree Sidebar */}
       <FileTree
-        folders={Array.isArray(foldersData?.data) ? foldersData.data : []}
-        files={Array.isArray(filesData?.data) ? filesData.data : []}
+        folders={
+          Array.isArray(foldersData?.data) 
+            ? foldersData.data 
+            : (foldersData?.data?.folders || [])
+        }
+        files={
+          Array.isArray(filesData?.data) 
+            ? filesData.data 
+            : (filesData?.data?.files || [])
+        }
         onFolderClick={handleFolderClick}
         onFileClick={handleFileClick}
         currentPath={folderId}

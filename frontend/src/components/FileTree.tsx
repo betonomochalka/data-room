@@ -38,6 +38,12 @@ export const FileTree: React.FC<FileTreeProps> = ({
   };
 
   const buildTree = (): TreeNode[] => {
+    // Safety check: ensure folders and files are arrays
+    if (!Array.isArray(folders) || !Array.isArray(files)) {
+      console.warn('FileTree: folders or files is not an array', { folders, files });
+      return [];
+    }
+
     // Build tree structure recursively
     const buildNode = (folder: any): TreeNode => {
       const node: TreeNode = {

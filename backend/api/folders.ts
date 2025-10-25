@@ -41,18 +41,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (req.method === 'POST' && !id) {
       // Create a new folder
-      const { name, data_room_id, parent_folder_id } = req.body;
+      const { name, dataRoomId, parentId } = req.body;
 
-      if (!name || !data_room_id) {
-        res.status(400).json({ error: 'Name and data_room_id are required' });
+      if (!name || !dataRoomId) {
+        res.status(400).json({ error: 'Name and dataRoomId are required' });
         return;
       }
 
       // Verify the user owns the data room
       const dataRoom = await prisma.dataRoom.findFirst({
         where: { 
-          id: data_room_id,
-          user_id: userId 
+          id: dataRoomId,
+          ownerId: userId 
         }
       });
 
@@ -64,15 +64,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const folder = await prisma.folder.create({
         data: {
           name,
-          data_room_id,
-          parent_folder_id: parent_folder_id || null,
-          user_id: userId,
+          dataRoomId,
+          parentId: parentId || null,
+          userId: userId,
         },
         include: {
           _count: {
             select: { 
               files: true,
-              sub_folders: true 
+              children: true 
             }
           }
         }
@@ -99,7 +99,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               _count: {
                 select: { 
                   files: true,
-                  sub_folders: true 
+                  children: true 
                 }
               }
             }
@@ -152,7 +152,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           _count: {
             select: { 
               files: true,
-              sub_folders: true 
+              children: true 
             }
           }
         }

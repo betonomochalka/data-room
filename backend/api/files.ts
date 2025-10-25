@@ -68,10 +68,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const file = await prisma.file.create({
         data: {
           name,
-          fileType: 'application/pdf', // Default to PDF for now
-          size: 0, // Placeholder size
-          blobUrl: '', // Placeholder URL
+          mimeType: 'application/pdf', // Default to PDF for now
+          fileSize: BigInt(0), // Placeholder size
+          filePath: '', // Placeholder path
           folderId,
+          dataRoomId: folder.dataRoomId,
+          userId: userId,
         }
       });
 

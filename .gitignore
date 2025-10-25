@@ -265,8 +265,18 @@ secrets/
 
 # Personal configuration files with credentials
 YOUR_CONFIG.md
-MY_CONFIG.md
 CONFIG.md
+VERCEL_DEPLOYMENT_GUIDE.md
+DEPLOY_CORS_FIX.md
+ERROR_REPORT.MD
+FIXES_APPLIED.md
+LICENSE
+CONTRIBUTING.md
+SECURITY.md
+SUPPORT.md
+CONTRIBUTING.md
+SECURITY.md
+SUPPORT.md
 
 # ============================================
 # NOTES

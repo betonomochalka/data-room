@@ -61,6 +61,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return;
       }
 
+      // Check for duplicate folder name in same parent
+      const existingFolder = await prisma.folder.findFirst({
+        where: {
+          name,
+          dataRoomId,
+          parentId: parentId || null,
+        }
+      });
+
+      if (existingFolder) {
+        res.status(409).json({ error: 'A folder with this name already exists in this location' });
+        return;
+      }
+
       const folder = await prisma.folder.create({
         data: {
           name,
@@ -122,6 +136,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.status(200).json({
         success: true,
         data: folder
+      });
+
+    } else if (req.method === 'POST' && id && typeof id === 'string' && action === 'duplicate') {
+      // Duplicate folder
+      const folder = await prisma.folder.findFirst({
+        where: { 
+          id,
+          dataRoom: {
+            ownerId: userId
+          }
+        },
+        include: {
+          files: true,
+          children: true
+        }
+      });
+
+      if (!folder) {
+        res.status(404).json({ error: 'Folder not found' });
+        return;
+      }
+
+      // Create duplicate folder
+      const duplicateFolder = await prisma.folder.create({
+        data: {
+          name: `${folder.name} (Copy)`,
+          dataRoomId: folder.dataRoomId,
+          parentId: folder.parentId,
+          userId: userId,
+        }
+      });
+
+      res.status(201).json({
+        success: true,
+        data: duplicateFolder,
+        message: 'Folder duplicated successfully'
       });
 
     } else if (req.method === 'PATCH' && id && typeof id === 'string') {

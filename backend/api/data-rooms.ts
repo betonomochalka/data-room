@@ -82,6 +82,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return;
       }
 
+      // Check for duplicate data room name for this user
+      const existingDataRoom = await prisma.dataRoom.findFirst({
+        where: {
+          name,
+          ownerId: userId,
+        }
+      });
+
+      if (existingDataRoom) {
+        res.status(409).json({ error: 'A data room with this name already exists' });
+        return;
+      }
+
       const dataRoom = await prisma.dataRoom.create({
         data: {
           name,
@@ -153,6 +166,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ownerId: userId 
         },
         include: {
+          _count: {
+            select: { 
+              folders: {
+                where: { parentId: null } // Only count root folders
+              }
+            }
+          },
           folders: {
             where: { parentId: null }, // Only root folders
             include: {

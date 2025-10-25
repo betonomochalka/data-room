@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Plus, Folder, FileText, Trash2, Edit, Upload, Search } from 'lucide-react';
+import { ArrowLeft, Plus, Folder, FileText, Trash2, Edit, Upload, Search, Copy, MoreVertical } from 'lucide-react';
 import { DataRoom, Folder as FolderType, File as FileType, ApiResponse } from '../types';
 import { Button } from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
@@ -25,8 +25,14 @@ export const DataRoomView: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadFileName, setUploadFileName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item: { id: string; name: string; type: 'folder' | 'file' } } | null>(null);
   
-
+  // Close context menu on click outside
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
 
   // Fetch data room
   const { data: dataRoomData } = useQuery<ApiResponse<DataRoom>>({
@@ -91,22 +97,32 @@ export const DataRoomView: React.FC = () => {
     },
     onError: (error: any) => {
       console.error('Folder creation error:', error);
-      alert(`Failed to create folder: ${error.message}`);
+      const message = error.response?.status === 409
+        ? error.response.data.error
+        : `Failed to create folder: ${error.message}`;
+      alert(message);
     },
   });
 
   const deleteFolderMutation = useMutation({
     mutationFn: async (folderIdToDelete: string) => {
-      await api.delete(`/folders/${folderIdToDelete}`);
+      console.log('🗑️ Deleting folder:', folderIdToDelete);
+      const response = await api.delete(`/folders/${folderIdToDelete}`);
+      console.log('✅ Delete response:', response);
       return { id: folderIdToDelete };
     },
     onSuccess: () => {
+      alert('✅ Folder deleted successfully!');
       // Invalidate ALL related queries to refresh file tree
       queryClient.invalidateQueries({ queryKey: ['dataRoom', id] });
       queryClient.invalidateQueries({ queryKey: ['folders', id] });
       if (folderId) {
         queryClient.invalidateQueries({ queryKey: ['folder', folderId] });
       }
+    },
+    onError: (error: any) => {
+      console.error('❌ Delete folder error:', error);
+      alert(`Failed to delete folder: ${error.response?.data?.error || error.message}`);
     },
   });
 
@@ -116,6 +132,7 @@ export const DataRoomView: React.FC = () => {
       return { id: fileId };
     },
     onSuccess: () => {
+      alert('✅ File deleted successfully!');
       // Invalidate ALL related queries to refresh file tree
       queryClient.invalidateQueries({ queryKey: ['dataRoom', id] });
       queryClient.invalidateQueries({ queryKey: ['folders', id] });
@@ -123,6 +140,10 @@ export const DataRoomView: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ['folder', folderId] });
         queryClient.invalidateQueries({ queryKey: ['files', id, folderId] });
       }
+    },
+    onError: (error: any) => {
+      console.error('Delete file error:', error);
+      alert(`❌ Failed to delete file: ${error.response?.data?.error || error.message}`);
     },
   });
 
@@ -155,6 +176,45 @@ export const DataRoomView: React.FC = () => {
       setNewName('');
       // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ['files', id, folderId] });
+    },
+  });
+
+  // Duplicate folder mutation
+  const duplicateFolderMutation = useMutation({
+    mutationFn: async (folderId: string) => {
+      const response = await api.post(`/folders?id=${folderId}&action=duplicate`);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      alert('✅ Folder duplicated successfully!');
+      queryClient.invalidateQueries({ queryKey: ['dataRoom', id] });
+      queryClient.invalidateQueries({ queryKey: ['folders', id] });
+      if (folderId) {
+        queryClient.invalidateQueries({ queryKey: ['folder', folderId] });
+      }
+    },
+    onError: (error: any) => {
+      alert(`Failed to duplicate folder: ${error.response?.data?.error || error.message}`);
+    },
+  });
+
+  // Duplicate file mutation
+  const duplicateFileMutation = useMutation({
+    mutationFn: async (fileId: string) => {
+      const response = await api.post(`/files?id=${fileId}&action=duplicate`);
+      return response.data.data;
+    },
+    onSuccess: () => {
+      alert('✅ File duplicated successfully!');
+      queryClient.invalidateQueries({ queryKey: ['dataRoom', id] });
+      queryClient.invalidateQueries({ queryKey: ['folders', id] });
+      if (folderId) {
+        queryClient.invalidateQueries({ queryKey: ['folder', folderId] });
+        queryClient.invalidateQueries({ queryKey: ['files', id, folderId] });
+      }
+    },
+    onError: (error: any) => {
+      alert(`Failed to duplicate file: ${error.response?.data?.error || error.message}`);
     },
   });
 
@@ -195,8 +255,13 @@ export const DataRoomView: React.FC = () => {
     },
     onError: (error: any) => {
       console.error('File upload error:', error);
-      const message = error.response?.status === 413 
+      const status = error.response?.status;
+      const message = status === 413 
         ? 'File too large! Vercel Pro has a 100MB limit.'
+        : status === 409
+        ? error.response.data.error
+        : status === 401
+        ? 'Authentication failed. Please try logging out and back in.'
         : error.message || 'File upload failed';
       alert(`❌ Upload failed: ${message}`);
     },
@@ -269,17 +334,37 @@ export const DataRoomView: React.FC = () => {
     }
   };
 
-  // Search across all folders and files, not just current view
+  // Search across entire data room
   const searchAllContent = () => {
     if (!searchQuery.trim()) {
       return { folders, files };
     }
 
     const query = searchQuery.toLowerCase();
-    // For now, search only in current view since we don't have a global search API
-    const matchingFolders = folders.filter((folder: FolderType) => 
-      folder.name.toLowerCase().includes(query)
-    );
+    
+    // Get ALL folders from data room (root level)
+    const allFolders = Array.isArray(foldersData?.data) 
+      ? foldersData.data 
+      : (foldersData?.data?.folders || []);
+    
+    // Recursively search through all folders
+    const searchInFolders = (foldersList: any[]): any[] => {
+      let results: any[] = [];
+      foldersList.forEach((folder: any) => {
+        if (folder.name.toLowerCase().includes(query)) {
+          results.push(folder);
+        }
+        if (folder.children && folder.children.length > 0) {
+          results = results.concat(searchInFolders(folder.children));
+        }
+      });
+      return results;
+    };
+    
+    // Search in current view AND all subfolders
+    const matchingFolders = searchInFolders(allFolders);
+    
+    // For files, search only in current folder (would need API endpoint for global file search)
     const matchingFiles = files.filter((file: FileType) => 
       file.name.toLowerCase().includes(query)
     );
@@ -463,7 +548,18 @@ export const DataRoomView: React.FC = () => {
               <h2 className="text-xl font-semibold mb-4">Folders</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredFolders.map((folder: FolderType) => (
-                  <Card key={folder.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                  <Card 
+                    key={folder.id} 
+                    className="hover:shadow-md transition-shadow cursor-pointer"
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setContextMenu({ 
+                        x: e.clientX, 
+                        y: e.clientY, 
+                        item: { id: folder.id, name: folder.name, type: 'folder' }
+                      });
+                    }}
+                  >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div
@@ -496,12 +592,45 @@ export const DataRoomView: React.FC = () => {
                             size="icon"
                             onClick={(e) => {
                               e.stopPropagation();
+                              duplicateFolderMutation.mutate(folder.id);
+                            }}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
                               if (window.confirm('Delete this folder and all its contents?')) {
                                 deleteFolderMutation.mutate(folder.id);
                               }
                             }}
                           >
                             <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setContextMenu({ 
+                                x: e.clientX, 
+                                y: e.clientY, 
+                                item: { id: folder.id, name: folder.name, type: 'folder' }
+                              });
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setContextMenu({ 
+                                x: e.currentTarget.getBoundingClientRect().left, 
+                                y: e.currentTarget.getBoundingClientRect().bottom, 
+                                item: { id: folder.id, name: folder.name, type: 'folder' }
+                              });
+                            }}
+                          >
+                            <MoreVertical className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
@@ -519,7 +648,18 @@ export const DataRoomView: React.FC = () => {
                     {filteredFiles.map((file: FileType) => {
                       const fileFolder = (foldersData?.data || []).find((f: FolderType) => f.id === file.folderId);
                       return (
-                    <Card key={file.id} className="hover:shadow-md transition-shadow">
+                    <Card 
+                      key={file.id} 
+                      className="hover:shadow-md transition-shadow"
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setContextMenu({ 
+                          x: e.clientX, 
+                          y: e.clientY, 
+                          item: { id: file.id, name: file.name, type: 'file' }
+                        });
+                      }}
+                    >
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3 flex-1">
@@ -557,12 +697,44 @@ export const DataRoomView: React.FC = () => {
                             variant="ghost"
                             size="icon"
                             onClick={() => {
+                              duplicateFileMutation.mutate(file.id);
+                            }}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
                               if (window.confirm('Delete this file?')) {
                                 deleteFileMutation.mutate(file.id);
                               }
                             }}
                           >
                             <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setContextMenu({ 
+                                x: e.clientX, 
+                                y: e.clientY, 
+                                item: { id: file.id, name: file.name, type: 'file' }
+                              });
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setContextMenu({ 
+                                x: e.currentTarget.getBoundingClientRect().left, 
+                                y: e.currentTarget.getBoundingClientRect().bottom, 
+                                item: { id: file.id, name: file.name, type: 'file' }
+                              });
+                            }}
+                          >
+                            <MoreVertical className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
@@ -663,6 +835,61 @@ export const DataRoomView: React.FC = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          className="fixed bg-white border border-gray-200 rounded-md shadow-lg py-1 z-50"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
+            onClick={() => {
+              setRenameItem(contextMenu.item);
+              setNewName(contextMenu.item.name);
+              setIsRenameDialogOpen(true);
+              setContextMenu(null);
+            }}
+          >
+            <Edit className="h-4 w-4" />
+            Rename
+          </button>
+          <button
+            className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
+            onClick={() => {
+              if (contextMenu.item.type === 'folder') {
+                duplicateFolderMutation.mutate(contextMenu.item.id);
+              } else {
+                duplicateFileMutation.mutate(contextMenu.item.id);
+              }
+              setContextMenu(null);
+            }}
+          >
+            <Copy className="h-4 w-4" />
+            Duplicate
+          </button>
+          <button
+            className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2 text-red-600"
+            onClick={() => {
+              const confirmMessage = contextMenu.item.type === 'folder' 
+                ? 'Delete this folder and all its contents?' 
+                : 'Delete this file?';
+              if (window.confirm(confirmMessage)) {
+                if (contextMenu.item.type === 'folder') {
+                  deleteFolderMutation.mutate(contextMenu.item.id);
+                } else {
+                  deleteFileMutation.mutate(contextMenu.item.id);
+                }
+              }
+              setContextMenu(null);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete
+          </button>
+        </div>
+      )}
         </div>
       </div>
     </div>

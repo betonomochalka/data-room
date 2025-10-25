@@ -65,6 +65,12 @@ export const DataRooms: React.FC = () => {
       setIsCreateDialogOpen(false);
       setNewDataRoomName('');
     },
+    onError: (error: any) => {
+      const message = error.code === '23505' || error.message.includes('duplicate')
+        ? 'A data room with this name already exists'
+        : `Failed to create data room: ${error.message}`;
+      alert(message);
+    },
   });
 
   const deleteMutation = useMutation({

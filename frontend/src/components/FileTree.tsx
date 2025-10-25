@@ -142,7 +142,7 @@ export const FileTree: React.FC<FileTreeProps> = ({
                 </button>
               )}
               {!hasChildren && <div className="w-4 h-4" />}
-              {isActive || isExpanded ? (
+              {isActive ? (
                 <FolderOpen className="h-4 w-4 text-blue-500" />
               ) : (
                 <Folder className="h-4 w-4 text-blue-500" />

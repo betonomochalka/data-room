@@ -40,13 +40,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
+  const { id, action } = req.query;
+
   const userId = authenticateToken(req);
+  console.log('🔐 Auth check:', { 
+    userId, 
+    hasAuthHeader: !!req.headers.authorization,
+    action,
+    method: req.method 
+  });
+  
   if (!userId) {
+    console.error('❌ Unauthorized - no valid token');
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
-
-  const { id, action } = req.query;
 
   try {
     if (req.method === 'POST' && action === 'upload') {
@@ -81,6 +89,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return;
       }
 
+      // Check for duplicate file name in same folder
+      const existingFile = await prisma.file.findFirst({
+        where: {
+          name,
+          folderId,
+        }
+      });
+
+      if (existingFile) {
+        res.status(409).json({ error: 'A file with this name already exists in this folder' });
+        return;
+      }
+
       // Read the file buffer
       const fileBuffer = await fs.readFile(uploadedFile.filepath);
       
@@ -104,6 +125,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         success: true,
         data: file,
         message: 'File uploaded successfully'
+      });
+
+    } else if (req.method === 'POST' && id && typeof id === 'string' && action === 'duplicate') {
+      // Duplicate file
+      const file = await prisma.file.findFirst({
+        where: { 
+          id,
+          folder: {
+            dataRoom: {
+              ownerId: userId
+            }
+          }
+        }
+      });
+
+      if (!file) {
+        res.status(404).json({ error: 'File not found' });
+        return;
+      }
+
+      // Create duplicate file record
+      const duplicateFile = await prisma.file.create({
+        data: {
+          name: `${file.name} (Copy)`,
+          mimeType: file.mimeType,
+          fileSize: file.fileSize,
+          filePath: file.filePath, // Same file in storage
+          folderId: file.folderId,
+          dataRoomId: file.dataRoomId,
+          userId: userId,
+        }
+      });
+
+      res.status(201).json({
+        success: true,
+        data: duplicateFile,
+        message: 'File duplicated successfully'
       });
 
     } else if (req.method === 'PATCH' && id && typeof id === 'string') {

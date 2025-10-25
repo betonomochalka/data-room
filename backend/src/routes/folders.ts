@@ -203,6 +203,7 @@ router.post('/', validateCreateFolder, asyncHandler(async (req: AuthenticatedReq
       name,
       parentId: parentId || null,
       dataRoomId,
+      userId: req.user!.id,
     },
     include: {
       _count: {

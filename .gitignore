@@ -263,6 +263,11 @@ docs/build/
 secrets/
 .secrets/
 
+# Personal configuration files with credentials
+YOUR_CONFIG.md
+MY_CONFIG.md
+CONFIG.md
+
 # ============================================
 # NOTES
 # ============================================

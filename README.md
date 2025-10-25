@@ -9,6 +9,24 @@ A modern, secure document management system built with React, Node.js, and Supab
 
 ---
 
+## ⚡ IMPORTANT: Vercel-Only Project
+
+**This project runs entirely on Vercel - NO local servers needed!**
+
+To start/test your project:
+1. Make changes to your code
+2. Run `git push origin main`
+3. Vercel automatically deploys
+4. Test at your Vercel URLs
+
+### 📖 Documentation Guide
+- **👉 New here?** Start with [START_HERE.md](./START_HERE.md) to choose the right guide
+- **⚡ Quick start**: [QUICK_START.md](./QUICK_START.md) - Deploy in minutes
+- **🔧 Full setup**: [VERCEL_DEPLOYMENT_GUIDE.md](./VERCEL_DEPLOYMENT_GUIDE.md) - Complete deployment guide
+- **📋 Daily workflow**: [VERCEL_WORKFLOW.md](./VERCEL_WORKFLOW.md) - Quick reference for daily use
+
+---
+
 ## 📋 Table of Contents
 
 - [Features](#features)
@@ -157,164 +175,98 @@ From your Supabase project dashboard:
    - **Client Secret** (from Google Console)
 5. Click **"Save"**
 
-### 4. Install Dependencies
+### 4. Configure Environment Variables (for Vercel)
 
-#### Backend
+You'll set these environment variables in the **Vercel Dashboard** (not in local files).
 
-```bash
-cd backend
-npm install
-```
-
-#### Frontend
-
-```bash
-cd ../frontend
-npm install
-```
-
-### 5. Configure Environment Variables
-
-#### Backend Environment
-
-Create `backend/.env`:
-
-```bash
-cd backend
-cp env.example .env
-```
-
-Edit `backend/.env`:
+#### Backend Environment Variables (Set in Vercel)
 
 ```env
-# Server
-NODE_ENV=development
-PORT=3001
-
-# Database (Supabase PostgreSQL - Session Pooler for IPv4 compatibility)
-DATABASE_URL="postgresql://postgres.YOUR_PROJECT_REF:YOUR_PASSWORD@aws-0-us-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+# Database (Use port 5432 for Vercel production)
+DATABASE_URL=postgresql://postgres.YOUR_PROJECT_REF:YOUR_PASSWORD@aws-0-us-east-1.pooler.supabase.com:5432/postgres
 
 # JWT Secret (generate a random string)
-JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
+JWT_SECRET=your-super-secret-jwt-key-make-it-long-and-random
 
 # Supabase
-SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co"
-SUPABASE_SERVICE_KEY="your-supabase-service-role-key"
+SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_SERVICE_KEY=your-supabase-service-role-key
+
+# Node Environment
+NODE_ENV=production
 
 # CORS
-ALLOWED_ORIGINS="http://localhost:3000"
+ALLOWED_ORIGINS=https://your-frontend.vercel.app
 ```
 
-**Important**:
-- Replace `YOUR_PROJECT_REF` with your Supabase project reference
-- Replace `YOUR_PASSWORD` with your Supabase database password
-- Generate a secure `JWT_SECRET` (can use: `openssl rand -base64 32`)
-- Get `SUPABASE_SERVICE_KEY` from Supabase Dashboard → Settings → API → `service_role` key
-
-#### Frontend Environment
-
-Create `frontend/.env`:
-
-```bash
-cd ../frontend
-cp .env.example .env
-```
-
-Edit `frontend/.env`:
+#### Frontend Environment Variables (Set in Vercel)
 
 ```env
-REACT_APP_API_URL=http://localhost:3001/api
+REACT_APP_API_URL=https://your-backend.vercel.app/api
 REACT_APP_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
 
-**Important**:
-- Replace `YOUR_PROJECT_REF` with your Supabase project reference
-- Get `REACT_APP_SUPABASE_ANON_KEY` from Supabase Dashboard → Settings → API → `anon` key
-
-### 6. Initialize Database
-
-Run Prisma migrations to create database tables:
-
-```bash
-cd backend
-npx prisma generate
-npx prisma db push
-```
-
-**Expected output**:
-```
-✔ Generated Prisma Client
-✔ Database synchronized
-```
+**See [VERCEL_DEPLOYMENT_GUIDE.md](./VERCEL_DEPLOYMENT_GUIDE.md) for complete setup instructions.**
 
 ---
 
 ## 🏃 Running the Application
 
-### Development Mode
+### ⚠️ IMPORTANT: This Project Uses Vercel for Testing
 
-Open **two terminal windows**:
+**No local servers needed!** This project is designed to run entirely on Vercel.
 
-#### Terminal 1: Backend
+### Deploy & Test on Vercel
 
-```bash
-cd backend
-npm run dev
-```
+1. **Push your code to Git**:
+   ```bash
+   git add .
+   git commit -m "Your changes"
+   git push origin main
+   ```
 
-**Expected output**:
-```
-🚀 Server running on port 3001
-📊 Environment: development
-🔗 Health check: http://localhost:3001/api/health
-```
+2. **Vercel will automatically deploy** your changes
 
-#### Terminal 2: Frontend
+3. **Access your application** at your Vercel URLs:
+   - Frontend: `https://your-frontend.vercel.app`
+   - Backend: `https://your-backend.vercel.app`
 
-```bash
-cd frontend
-npm start
-```
+### First Time Setup
 
-**Expected output**:
-```
-webpack compiled successfully
-Local: http://localhost:3000
-```
+For detailed deployment instructions, see **[VERCEL_DEPLOYMENT_GUIDE.md](./VERCEL_DEPLOYMENT_GUIDE.md)**
 
-### Access the Application
-
-Open your browser and navigate to:
-```
-http://localhost:3000
-```
-
-You should see the Data Room login page with **"Sign in with Google"** button.
+**Quick Steps**:
+1. Create two Vercel projects (one for backend, one for frontend)
+2. Set environment variables in Vercel dashboard
+3. Deploy both projects
+4. Update CORS and Google OAuth settings
+5. Test your live application
 
 ---
 
 ## 🔧 Environment Variables
 
-### Backend Variables
+All environment variables are set in the **Vercel Dashboard** (Settings → Environment Variables).
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `NODE_ENV` | Environment (development/production) | `development` |
-| `PORT` | Server port | `3001` |
-| `DATABASE_URL` | Supabase PostgreSQL connection string | `postgresql://...` |
-| `JWT_SECRET` | Secret for JWT token signing | `random-secure-string` |
-| `SUPABASE_URL` | Supabase project URL | `https://xyz.supabase.co` |
-| `SUPABASE_SERVICE_KEY` | Supabase service role key | `eyJh...` |
-| `ALLOWED_ORIGINS` | CORS allowed origins | `http://localhost:3000` |
+### Backend Variables (Vercel)
 
-### Frontend Variables
+| Variable | Description | Production Value |
+|----------|-------------|------------------|
+| `NODE_ENV` | Environment mode | `production` |
+| `DATABASE_URL` | Supabase PostgreSQL (port **5432**) | `postgresql://postgres.xxx:pass@...pooler.supabase.com:5432/postgres` |
+| `JWT_SECRET` | Secret for JWT token signing | Generate: `openssl rand -base64 32` |
+| `SUPABASE_URL` | Supabase project URL | `https://xxx.supabase.co` |
+| `SUPABASE_SERVICE_KEY` | Supabase service role key | From Supabase Settings → API |
+| `ALLOWED_ORIGINS` | Frontend URL for CORS | `https://your-frontend.vercel.app` |
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `REACT_APP_API_URL` | Backend API URL | `http://localhost:3001/api` |
-| `REACT_APP_SUPABASE_URL` | Supabase project URL | `https://xyz.supabase.co` |
-| `REACT_APP_SUPABASE_ANON_KEY` | Supabase anonymous key | `eyJh...` |
+### Frontend Variables (Vercel)
+
+| Variable | Description | Production Value |
+|----------|-------------|------------------|
+| `REACT_APP_API_URL` | Backend API URL | `https://your-backend.vercel.app/api` |
+| `REACT_APP_SUPABASE_URL` | Supabase project URL | `https://xxx.supabase.co` |
+| `REACT_APP_SUPABASE_ANON_KEY` | Supabase anonymous key | From Supabase Settings → API |
 
 ---
 
@@ -480,96 +432,84 @@ For complete API documentation, see [ARCHITECTURE.md](./ARCHITECTURE.md#api-desi
 
 ## 🚢 Deployment
 
-### Recommended: Vercel + Supabase
+### Deploy to Vercel (Required for Testing)
 
-#### Prerequisites
-- Vercel account ([Sign up](https://vercel.com/))
-- Supabase project (already created in setup)
+This project **requires Vercel** for testing and production. No local servers are used.
 
-#### Deploy Backend
+**📖 Complete Deployment Guide**: See **[VERCEL_DEPLOYMENT_GUIDE.md](./VERCEL_DEPLOYMENT_GUIDE.md)**
 
-1. Install Vercel CLI:
-   ```bash
-   npm install -g vercel
-   ```
+**Quick Overview**:
+1. Connect your Git repository to Vercel
+2. Create two projects: one for `backend`, one for `frontend`
+3. Set environment variables in Vercel dashboard
+4. Deploy both projects
+5. Update CORS and Google OAuth settings with production URLs
 
-2. Deploy backend:
-   ```bash
-   cd backend
-   vercel
-   ```
-
-3. Set environment variables in Vercel dashboard:
-   - All variables from `backend/.env`
-   - Set `NODE_ENV=production`
-   - Set `ALLOWED_ORIGINS` to your frontend URL
-
-4. Run Prisma migrations:
-   ```bash
-   npx prisma migrate deploy
-   ```
-
-#### Deploy Frontend
-
-1. Update `frontend/.env`:
-   ```env
-   REACT_APP_API_URL=https://your-backend.vercel.app/api
-   ```
-
-2. Deploy frontend:
-   ```bash
-   cd frontend
-   vercel
-   ```
-
-3. Update Google OAuth redirect URIs to include production URL
-
-For detailed deployment guide, see [DEPLOYMENT.md](./DEPLOYMENT.md) (if created).
+**To Update Your App**:
+```bash
+git push origin main
+```
+Vercel automatically redeploys on every push!
 
 ---
 
 ## 🧪 Testing
 
-### Run Backend Tests
-```bash
-cd backend
-npm test
-```
+### Live Testing on Vercel
+Test your application by visiting your deployed Vercel URLs:
+- **Frontend**: `https://your-frontend.vercel.app`
+- **Backend**: `https://your-backend.vercel.app/api/health`
 
-### Run Frontend Tests
+### Unit Tests (Optional - Local Only)
+If you want to run unit tests locally:
 ```bash
-cd frontend
-npm test
+cd backend && npm test
+cd frontend && npm test
 ```
+*Note: These tests don't require running the actual servers.*
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Backend won't start
+### Deployment Issues
 
-**Error**: `P1001: Can't reach database server`
-- **Solution**: Check `DATABASE_URL` in `backend/.env`
-- Make sure you're using the **Session Pooler** URL (port `6543`)
+**Error**: `Can't reach database server` on Vercel
+- **Solution**: Use port **5432** (not 6543) in `DATABASE_URL` for production
+- Format: `postgresql://postgres.xxx:pass@...pooler.supabase.com:5432/postgres`
 
-**Error**: `P1013: Invalid database string`
-- **Solution**: Ensure `DATABASE_URL` includes `?pgbouncer=true`
+**Error**: `CORS policy blocked`
+- **Solution**: Set `ALLOWED_ORIGINS` in backend to exact frontend URL
+- Must match exactly: `https://your-frontend.vercel.app`
 
-### Google OAuth not working
+**Error**: `Network Error` from frontend
+- **Solution**: Check `REACT_APP_API_URL` includes `/api` at the end
+- Format: `https://your-backend.vercel.app/api`
+
+### Google OAuth Issues
 
 **Error**: `redirect_uri_mismatch`
-- **Solution**: Check Google Console redirect URIs match Supabase callback URL
+- **Solution**: Add production URLs to Google Cloud Console redirect URIs:
+  - `https://YOUR_PROJECT_REF.supabase.co/auth/v1/callback`
+  - `https://your-frontend.vercel.app`
 
 **Error**: `Bad ID token`
 - **Solution**: Ensure Google OAuth is enabled in Supabase dashboard
 
-### File upload fails
+### File Upload Issues
 
 **Error**: `File too large`
 - **Solution**: Files must be under 50MB
 
 **Error**: `Only PDF files are allowed`
 - **Solution**: Upload only PDF files
+
+### Changes Not Appearing
+
+**Issue**: Code changes not reflecting on Vercel
+- **Solution**: Push to git (`git push origin main`)
+- Wait 1-2 minutes for deployment
+- Hard refresh browser (Ctrl+Shift+R)
 
 ---
 

@@ -218,16 +218,18 @@ router.post('/upload', upload.single('file'), handleMulterError, validateCreateF
 
   try {
     // Upload file to Supabase Storage
-    const blobUrl = await uploadFile(req.file.buffer, req.file.originalname);
+    const filePath = await uploadFile(req.file.buffer, req.file.originalname);
 
     // Save file metadata to database
     const file = await prisma.file.create({
       data: {
         name,
-        fileType: req.file.mimetype,
-        size: req.file.size,
+        mimeType: req.file.mimetype,
+        fileSize: BigInt(req.file.size),
         folderId,
-        blobUrl,
+        dataRoomId: folder.dataRoomId,
+        userId: req.user!.id,
+        filePath,
       },
       include: {
         folder: {
@@ -336,9 +338,11 @@ router.delete('/:id', asyncHandler(async (req: AuthenticatedRequest, res: Respon
 
   try {
     // Delete file from Supabase Storage
-    const filePath = file.blobUrl.split('/').pop();
-    if (filePath) {
-      await deleteSupabaseFile(filePath);
+    if (file.filePath) {
+      const fileName = file.filePath.split('/').pop();
+      if (fileName) {
+        await deleteSupabaseFile(fileName);
+      }
     }
 
     // Delete file record from database
@@ -397,7 +401,7 @@ router.get('/search', asyncHandler(async (req: AuthenticatedRequest, res: Respon
   }
 
   if (fileType) {
-    whereClause.fileType = fileType;
+    whereClause.mimeType = fileType;
   }
 
   if (dateFrom || dateTo) {
@@ -407,9 +411,9 @@ router.get('/search', asyncHandler(async (req: AuthenticatedRequest, res: Respon
   }
 
   if (sizeMin || sizeMax) {
-    whereClause.size = {};
-    if (sizeMin) whereClause.size.gte = Number(sizeMin);
-    if (sizeMax) whereClause.size.lte = Number(sizeMax);
+    whereClause.fileSize = {};
+    if (sizeMin) whereClause.fileSize.gte = BigInt(sizeMin as string);
+    if (sizeMax) whereClause.fileSize.lte = BigInt(sizeMax as string);
   }
 
   const [files, total] = await Promise.all([

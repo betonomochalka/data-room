@@ -100,11 +100,33 @@ model File {
 
 ---
 
+### ✅ 6. Fixed Files API (api/files.ts)
+
+**Problem**: Using wrong field names in file creation.
+
+**Fix**: Changed `fileType` → `mimeType`, `size` → `fileSize`, `blobUrl` → `filePath`, added required fields.
+
+**Location**: `backend/api/files.ts` line 71
+
+---
+
+### ✅ 7. Fixed Folders API (api/folders.ts)
+
+**Problem**: Using database column names in API:
+- Request params: `data_room_id`, `parent_folder_id`
+- Database fields: `user_id`, `sub_folders`
+
+**Fix**: Changed to Prisma field names: `dataRoomId`, `parentId`, `userId`, `children`.
+
+**Location**: `backend/api/folders.ts` (multiple lines)
+
+---
+
 ## Next Steps
 
 1. Commit these changes:
 ```bash
-git add backend/src/routes/files.ts backend/src/routes/folders.ts backend/api/data-rooms.ts
+git add backend/src/routes/files.ts backend/src/routes/folders.ts backend/api/data-rooms.ts backend/api/files.ts backend/api/folders.ts
 git commit -m "Fix all TypeScript errors - align with Prisma schema"
 ```
 

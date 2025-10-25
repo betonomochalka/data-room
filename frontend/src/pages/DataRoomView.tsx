@@ -156,10 +156,10 @@ export const DataRoomView: React.FC = () => {
 
   const uploadFileMutation = useMutation({
     mutationFn: async ({ file, name, folderId }: { file: File; name: string; folderId: string }) => {
-      // Check file size (Vercel free tier limit: 4.5MB)
-      const maxSize = 4.5 * 1024 * 1024; // 4.5MB in bytes
+      // Check file size (Vercel Pro limit: 100MB)
+      const maxSize = 100 * 1024 * 1024; // 100MB in bytes
       if (file.size > maxSize) {
-        throw new Error(`File size exceeds 4.5MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB. Please upgrade your Vercel plan or use a smaller file.`);
+        throw new Error(`File size exceeds 100MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB. Please compress the file or upload a smaller file.`);
       }
 
       const formData = new FormData();
@@ -186,7 +186,7 @@ export const DataRoomView: React.FC = () => {
     onError: (error: any) => {
       console.error('File upload error:', error);
       const message = error.response?.status === 413 
-        ? 'File too large! Vercel free tier has a 4.5MB limit.'
+        ? 'File too large! Vercel Pro has a 100MB limit.'
         : error.message || 'File upload failed';
       alert(`❌ Upload failed: ${message}`);
     },
@@ -201,9 +201,16 @@ export const DataRoomView: React.FC = () => {
         files: folderData?.data?.files || []
       };
     } else {
-      // Show root level contents (root folders and files)
+      // Show root level contents (only folders with no parent)
+      const allFolders = Array.isArray(foldersData?.data) 
+        ? foldersData.data 
+        : (foldersData?.data?.folders || []);
+      
+      // Filter to only show root-level folders (no parentId)
+      const rootFolders = allFolders.filter((folder: any) => !folder.parentId);
+      
       return {
-        folders: foldersData?.data || [],
+        folders: rootFolders,
         files: filesData?.data || []
       };
     }
@@ -535,15 +542,6 @@ export const DataRoomView: React.FC = () => {
             </div>
           )}
 
-          {filteredFolders.length === 0 && filteredFiles.length === 0 && (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Folder className="h-16 w-16 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Items Yet</h3>
-                <p className="text-muted-foreground mb-4">Create a folder or upload files to get started</p>
-              </CardContent>
-            </Card>
-          )}
         </div>
       )}
 

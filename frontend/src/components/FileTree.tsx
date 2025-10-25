@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText } from 'lucide-react';
 import { Folder as FolderType, File as FileType } from '../types';
 
@@ -26,6 +26,17 @@ export const FileTree: React.FC<FileTreeProps> = ({
   currentPath
 }) => {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+
+  // Auto-expand folder when navigating to it
+  useEffect(() => {
+    if (currentPath) {
+      setExpandedFolders(prev => {
+        const newSet = new Set(prev);
+        newSet.add(currentPath);
+        return newSet;
+      });
+    }
+  }, [currentPath]);
 
   const toggleExpanded = (folderId: string) => {
     const newExpanded = new Set(expandedFolders);
@@ -91,7 +102,6 @@ export const FileTree: React.FC<FileTreeProps> = ({
           style={{ paddingLeft: `${level * 16 + 8}px` }}
           onClick={() => {
             if (node.type === 'folder') {
-              toggleExpanded(node.id);
               onFolderClick(node.id);
             } else {
               onFileClick(node.id);
@@ -100,16 +110,23 @@ export const FileTree: React.FC<FileTreeProps> = ({
         >
           {node.type === 'folder' && (
             <div className="flex items-center gap-1">
-              {hasChildren ? (
-                isExpanded ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )
-              ) : (
-                <div className="w-4 h-4" />
+              {hasChildren && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleExpanded(node.id);
+                  }}
+                  className="hover:bg-gray-200 rounded"
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </button>
               )}
-              {isExpanded ? (
+              {!hasChildren && <div className="w-4 h-4" />}
+              {isActive || isExpanded ? (
                 <FolderOpen className="h-4 w-4 text-blue-500" />
               ) : (
                 <Folder className="h-4 w-4 text-blue-500" />
